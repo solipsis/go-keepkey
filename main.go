@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/proto"
@@ -42,10 +44,72 @@ func main() {
 			}
 		}
 	}
+
 	fmt.Println("done")
 
 }
 
+func EthereumSignTx(device io.ReadWriter, derivationPath []uint32, nonce uint64) {
+	//data := []byte("potato")
+	data := make([]byte, 0)
+	length := uint32(len(data))
+	test := []byte("32Be343B94f860124dC4fEe278FDCBD38C102D88")
+	to := make([]byte, 20)
+	hex.Decode(to, test)
+
+	est := &keepkey.EthereumSignTx{
+		AddressN:   derivationPath,
+		Nonce:      new(big.Int).SetUint64(nonce).Bytes(),
+		GasPrice:   big.NewInt(5).Bytes(),
+		GasLimit:   big.NewInt(21000).Bytes(),
+		Value:      big.NewInt(5).Bytes(),
+		DataLength: &length,
+		To:         to,
+		//To:         []byte("32Be343B94f860124dC4fEe278FDCBD38C102D88"),
+	}
+
+	if length > 1024 {
+		est.DataInitialChunk, data = data[:1024], data[1024:]
+	} else {
+		est.DataInitialChunk, data = data, nil
+	}
+
+	response := new(keepkey.EthereumTxRequest)
+	fmt.Println("**************************************")
+	if _, err := keepkeyExchange(device, est, response); err != nil {
+		fmt.Println("error sending initial sign request")
+		log.Fatal(err)
+	}
+
+	// stream until a signature is returned
+	for response.DataLength != nil && int(*response.DataLength) <= len(data) {
+		chunk := data[:*response.DataLength]
+		data = data[*response.DataLength:]
+		if _, err := keepkeyExchange(device, &keepkey.EthereumTxAck{DataChunk: chunk}, response); err != nil {
+			fmt.Println("error streaming response")
+			log.Fatal(err)
+		}
+	}
+	fmt.Println(response)
+}
+
+/*
+type EthereumSignTx struct {
+	AddressN         []uint32           `protobuf:"varint,1,rep,name=address_n,json=addressN" json:"address_n,omitempty"`
+	Nonce            []byte             `protobuf:"bytes,2,opt,name=nonce" json:"nonce,omitempty"`
+	GasPrice         []byte             `protobuf:"bytes,3,opt,name=gas_price,json=gasPrice" json:"gas_price,omitempty"`
+	GasLimit         []byte             `protobuf:"bytes,4,opt,name=gas_limit,json=gasLimit" json:"gas_limit,omitempty"`
+	To               []byte             `protobuf:"bytes,5,opt,name=to" json:"to,omitempty"`
+	Value            []byte             `protobuf:"bytes,6,opt,name=value" json:"value,omitempty"`
+	DataInitialChunk []byte             `protobuf:"bytes,7,opt,name=data_initial_chunk,json=dataInitialChunk" json:"data_initial_chunk,omitempty"`
+	DataLength       *uint32            `protobuf:"varint,8,opt,name=data_length,json=dataLength" json:"data_length,omitempty"`
+	ToAddressN       []uint32           `protobuf:"varint,9,rep,name=to_address_n,json=toAddressN" json:"to_address_n,omitempty"`
+	AddressType      *OutputAddressType `protobuf:"varint,10,opt,name=address_type,json=addressType,enum=OutputAddressType" json:"address_type,omitempty"`
+	ExchangeType     *ExchangeType      `protobuf:"bytes,11,opt,name=exchange_type,json=exchangeType" json:"exchange_type,omitempty"`
+	ChainId          *uint32            `protobuf:"varint,12,opt,name=chain_id,json=chainId" json:"chain_id,omitempty"`
+	XXX_unrecognized []byte             `json:"-"`
+}
+*/
 func (kk *conn) Open(device io.ReadWriter) error {
 
 	features := new(keepkey.Features)
@@ -53,6 +117,13 @@ func (kk *conn) Open(device io.ReadWriter) error {
 		return err
 	}
 	fmt.Println(features)
+	success := new(keepkey.Success)
+	str := "Hello"
+	if _, err := keepkeyExchange(device, &keepkey.Ping{Message: &str}, success); err != nil {
+		return err
+	}
+	fmt.Println(success)
+	EthereumSignTx(device, []uint32{0}, 0)
 	return nil
 }
 
@@ -133,7 +204,7 @@ func keepkeyExchange(device io.ReadWriter, req proto.Message, results ...proto.M
 		if err := proto.Unmarshal(reply, failure); err != nil {
 			return 0, err
 		}
-		return 0, errors.New("trezor: " + failure.GetMessage())
+		return 0, errors.New("keepkey: " + failure.GetMessage())
 	}
 	if kind == uint16(keepkey.MessageType_MessageType_ButtonRequest) {
 		// We are waiting for user confirmation. acknowledge and wait
