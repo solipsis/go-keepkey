@@ -122,6 +122,7 @@ message Features {
 	optional bool pin_cached = 16;			// is PIN already cached in session?
 	optional bool passphrase_cached = 17;		// is passphrase already cached in session?
 	repeated PolicyType policies = 18;			// policies
+	optional string model = 21;			// device hardware model
 }
 
 /**
@@ -649,6 +650,9 @@ message EthereumSignTx {
 	optional OutputAddressType address_type = 10;	// output address type 
 	optional ExchangeType exchange_type = 11;	// exchange type data        
 	optional uint32 chain_id = 12;			// Chain Id for EIP 155
+	optional bytes token_value = 100;		// How many tokens to send
+	optional bytes  token_to = 101;			// 160 bit address hash to send tokens to
+	optional string token_shortcut = 102; 		// 3 or 4 character token identifier
 }
 
 /**
