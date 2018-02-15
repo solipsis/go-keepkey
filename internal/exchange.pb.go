@@ -26,7 +26,7 @@ type ExchangeAddress struct {
 func (m *ExchangeAddress) Reset()                    { *m = ExchangeAddress{} }
 func (m *ExchangeAddress) String() string            { return proto.CompactTextString(m) }
 func (*ExchangeAddress) ProtoMessage()               {}
-func (*ExchangeAddress) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{0} }
+func (*ExchangeAddress) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
 
 func (m *ExchangeAddress) GetCoinType() string {
 	if m != nil && m.CoinType != nil {
@@ -75,7 +75,7 @@ type ExchangeResponseV2 struct {
 func (m *ExchangeResponseV2) Reset()                    { *m = ExchangeResponseV2{} }
 func (m *ExchangeResponseV2) String() string            { return proto.CompactTextString(m) }
 func (*ExchangeResponseV2) ProtoMessage()               {}
-func (*ExchangeResponseV2) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{1} }
+func (*ExchangeResponseV2) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{1} }
 
 func (m *ExchangeResponseV2) GetDepositAddress() *ExchangeAddress {
 	if m != nil {
@@ -157,7 +157,7 @@ type SignedExchangeResponse struct {
 func (m *SignedExchangeResponse) Reset()                    { *m = SignedExchangeResponse{} }
 func (m *SignedExchangeResponse) String() string            { return proto.CompactTextString(m) }
 func (*SignedExchangeResponse) ProtoMessage()               {}
-func (*SignedExchangeResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{2} }
+func (*SignedExchangeResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{2} }
 
 func (m *SignedExchangeResponse) GetResponse() *ExchangeResponse {
 	if m != nil {
@@ -199,7 +199,7 @@ type ExchangeResponse struct {
 func (m *ExchangeResponse) Reset()                    { *m = ExchangeResponse{} }
 func (m *ExchangeResponse) String() string            { return proto.CompactTextString(m) }
 func (*ExchangeResponse) ProtoMessage()               {}
-func (*ExchangeResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{3} }
+func (*ExchangeResponse) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{3} }
 
 func (m *ExchangeResponse) GetDepositAddress() *ExchangeAddress {
 	if m != nil {
@@ -278,9 +278,9 @@ func init() {
 	proto.RegisterType((*ExchangeResponse)(nil), "ExchangeResponse")
 }
 
-func init() { proto.RegisterFile("exchange.proto", fileDescriptor1) }
+func init() { proto.RegisterFile("exchange.proto", fileDescriptor2) }
 
-var fileDescriptor1 = []byte{
+var fileDescriptor2 = []byte{
 	// 458 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x94, 0x4f, 0x6b, 0x14, 0x31,
 	0x18, 0xc6, 0x59, 0x77, 0xec, 0xce, 0xbc, 0xdb, 0xee, 0x9f, 0x08, 0x3a, 0x52, 0xff, 0xb1, 0x20,
