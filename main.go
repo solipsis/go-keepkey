@@ -12,10 +12,8 @@ import (
 	"io/ioutil"
 	"log"
 	"math/big"
-	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/karalabe/hid"
@@ -36,62 +34,40 @@ func newKeepkey() *Keepkey {
 	}
 }
 
-func (kk *Keepkey) LoadDevice() {
+// LoadDevice wipes the keepkey and initializes with the provided seedwords and pin code
+// Pin will be disabled on the device if len(pin) == 0
+func (kk *Keepkey) LoadDevice(words []string, pin string) error {
 
-	fmt.Println("wiping device")
+	// Wipe the device
 	wipe := new(kkProto.WipeDevice)
 	if _, err := kk.keepkeyExchange(wipe, &kkProto.Success{}); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	fmt.Println("Loading device from seed words")
-	//d4d257272131b4c30b923a47d6d89ad729f2bce79952f238f2f68b89c8cfb6ba560a9ddf8821b5af4084c5b0fe5e6607c78ef2f2ee3a9ef2654baea0299e4eb6
-	//words := "alcohol woman abuse must during monitor noble actual mixed trade anger aisle"
-	//words := "honey deal shell genuine addict brief eternal neglect return cross town life"
-	words := "water explain wink proof size gift sort silly collect differ yard anger"
-	//words := "all all all all all all all all all all all all"
-	//words := "rebel spread velvet volume trash pulse attend reason camp motion stick arctic"
-	//words := "lucky outer polar amazing drama spin happy cradle depth rookie drop exchange"
-	//words := "diesel boy pattern reason crouch million puzzle chef between post actual air index flush canal nice appear must like unfair emotion morning local barely"
-	pass := false
-	checksum := true
-	//pin := "1234"
+	mnemonic := strings.Join(words, " ")
 	load := &kkProto.LoadDevice{
-		Mnemonic:             &words,
-		PassphraseProtection: &pass,
-		SkipChecksum:         &checksum,
-		//Pin:                  &pin,
+		Mnemonic: &mnemonic,
 	}
+	if len(pin) > 0 {
+		load.Pin = &pin
+	}
+
+	// Initialize the device with seed words and pin
 	success := new(kkProto.Success)
 	if _, err := kk.keepkeyExchange(load, success); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
+	return nil
 }
 
+// TODO: do HID devices need to be closed?
 func (kk *Keepkey) Close() {
 	if kk.device == nil {
 		return
 	}
-	fmt.Println("closing HID")
 	kk.device.Close()
 	kk.device = nil
-
-}
-
-func TestUnmarshal() {
-	file, err := os.Open("buftest.txt")
-	if err != nil {
-		log.Fatal(err)
-	}
-	buf, err := ioutil.ReadAll(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	p := new(kkProto.EthereumSignTx)
-	proto.Unmarshal(buf, p)
-	fmt.Println(p)
 }
 
 func GetDevice() (*Keepkey, error) {
@@ -101,93 +77,48 @@ func GetDevice() (*Keepkey, error) {
 	// TODO: add support for multiple keepkeys
 	var deviceInfo, debugInfo hid.DeviceInfo
 	for _, info := range hid.Enumerate(kk.vendorID, 0) {
+		fmt.Println("info:", info)
 		if info.ProductID == kk.productID {
-			fmt.Println("Info:", info)
-			fmt.Println("Usage: ", info.Usage)
-			fmt.Println("Interface: ", info.Interface)
-			fmt.Println("Serial: ", info.Serial)
-			fmt.Println("Product: ", info.Product)
-			fmt.Println("PRoductID: ", info.ProductID)
-			fmt.Println("VendorID: ", info.VendorID)
-			fmt.Println("usagePage: ", info.UsagePage)
-			fmt.Println("path", info.Path)
-			fmt.Println("manufacturer", info.Manufacturer)
-
-			//device, err := info.Open()
-			//fmt.Println()
-			//fmt.Println("Device", device)
-			//if err != nil {
-			//log.Fatal(err)
-			//}
-			//device.Close()
-			//if info.Path < highestInfo.Path || highestInfo.Path == "" {
-			//highestInfo = info
-			//}
+			// seperate connection to debug interface if debug link is enabled
 			if strings.HasSuffix(info.Path, "1") {
+				fmt.Println("Debug: ", info)
 				debugInfo = info
 			} else {
+				fmt.Println("Device: ", info)
 				deviceInfo = info
 			}
-
-			fmt.Println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 		}
 	}
-	//fmt.Println("highestInfo: ", highestInfo)
 	if deviceInfo.Path == "" {
-
 		return nil, errors.New("No keepkey detected")
 	}
 
-	fmt.Println("**********************************")
-
+	// Open connection to device
 	device, err := deviceInfo.Open()
-	fmt.Println("Device", device)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	fmt.Println("initializing device")
-	if err = kk.Initialize(device); err != nil {
-		log.Fatal(err)
+	// debug
+	if debugInfo.Path != "" {
+		debug, err := debugInfo.Open()
+		if err != nil {
+			fmt.Println("unable to initiate debug link")
+		}
+		fmt.Println("Debug link established")
+		kk.debug = debug
 	}
 
-	// debug
-	debug, err := debugInfo.Open()
-	if err != nil {
-		fmt.Println("unable to initiate debug link")
+	// Ping the device and ask for its features
+	if _, err = kk.Initialize(device); err != nil {
+		return nil, err
 	}
-	fmt.Println("debug", debugInfo)
-	kk.debug = debug
-	fmt.Println("Connection to keepkey established")
 	return kk, nil
 }
 
-/*
-	//var devices []hid.DeviceInfo
-	for _, info := range hid.Enumerate(kk.vendorID, 0) {
-		if info.ProductID == kk.productID {
-			fmt.Println("keepkey detected")
-			// TODO: check if device already connected
-			fmt.Println("opening device")
-
-			device, err := info.Open()
-			fmt.Println("Device", device)
-			if err != nil {
-				log.Fatal(err)
-			}
-			fmt.Println("initializing device")
-			if err = kk.Initialize(device); err != nil {
-				log.Fatal(err)
-			}
-			fmt.Println("Connection to keepkey established")
-			return kk, nil
-		}
-	}
-*/
-//return nil, errors.New("No keepkey detected")
-
+// GetPublicKey requests public key from the device according to a bip44 node path
 func (kk *Keepkey) GetPublicKey(path []uint32) (*kkProto.HDNodeType, string, error) {
 
-	// TODO: Add more curves
+	// TODO: Add all curves device supports
 	curve := "secp256k1"
 	request := &kkProto.GetPublicKey{
 		AddressN:       path,
@@ -202,132 +133,64 @@ func (kk *Keepkey) GetPublicKey(path []uint32) (*kkProto.HDNodeType, string, err
 	return pubkey.Node, *pubkey.Xpub, nil
 }
 
-//type ApplyPolicies struct {
-//Policy           []*PolicyType `protobuf:"bytes,1,rep,name=policy" json:"policy,omitempty"`
-//XXX_unrecognized []byte        `json:"-"`
-//}
-//type PolicyType struct {
-//PolicyName       *string `protobuf:"bytes,1,opt,name=policy_name,json=policyName" json:"policy_name,omitempty"`
-//Enabled          *bool   `protobuf:"varint,2,opt,name=enabled" json:"enabled,omitempty"`
-//XXX_unrecognized []byte  `json:"-"`
-//}
+// ApplyPolicy enables or disables a named policy on the device
+func (kk *Keepkey) ApplyPolicy(name string, enabled bool) error {
 
-func (kk *Keepkey) ApplyPolicy() error {
-
-	name := "ShapeShift"
-	t := true
 	pol := &kkProto.PolicyType{
 		PolicyName: &name,
-		Enabled:    &t,
+		Enabled:    &enabled,
 	}
 	arr := make([]*kkProto.PolicyType, 0)
 	arr = append(arr, pol)
 	if _, err := kk.keepkeyExchange(&kkProto.ApplyPolicies{Policy: arr}, new(kkProto.Success)); err != nil {
 		return err
 	}
-	fmt.Println("Shapeshift policy turned on")
 	return nil
 }
-func (kk *Keepkey) Initialize(device *hid.Device) error {
+
+// Initialize assigns a hid connection to this keepkey and send initialize message to device
+func (kk *Keepkey) Initialize(device *hid.Device) (*kkProto.Features, error) {
 	kk.device = device
 
 	features := new(kkProto.Features)
-	fmt.Println("requesting features")
 	if _, err := kk.keepkeyExchange(&kkProto.Initialize{}, features); err != nil {
-		return err
+		return nil, err
 	}
-	fmt.Println("features received", features)
-	return nil
-
-	/*
-		features := new(kkProto.Features)
-		timeout := make(chan bool, 1)
-		done := make(chan error, 1)
-		for {
-			go func() {
-				time.Sleep(1000 * time.Millisecond)
-
-				fmt.Println("timeout")
-				timeout <- true
-			}()
-			go func() {
-				if _, err := keepkeyExchange(device, &kkProto.Initialize{}, features); err != nil {
-					done <- err
-				}
-				done <- nil
-			}()
-			// shitty retry till success that doesn't clean up after itself
-			select {
-			case v := <-done:
-				fmt.Println("done")
-				return v
-			case <-timeout:
-				fmt.Println("select timeout")
-				break
-			}
-
-			fmt.Println("Timedout trying again")
-		}
-		return nil
-	*/
-
+	return features, nil
 }
 
-func (kk *Keepkey) UploadFirmware(path string) {
-	//file, err := os.Open(path)
-	//defer file.Close()
-	//if err != nil {
-	//		log.Fatal(err)
-	//	}
+// UploadFirmware reads the contents of a given filepath and uploads data from the file
+// to the device. It returns the number of bytes written and an error
+func (kk *Keepkey) UploadFirmware(path string) (int, error) {
 
 	// load firmware and compute the hash
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Fatal("unableto read file")
+		return 0, err
 	}
-	fmt.Println("DATA LENGTH: ", len(data))
+
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, bytes.NewBuffer(data)); err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
 	hash := hasher.Sum(nil)
-	/*
-		hasher := sha256.New()
-		// TODO: explore multi-writer
-		if _, err := io.Copy(hasher, file); err != nil {
-			log.Fatal(err)
-		}
-		hash := hasher.Sum(nil)
 
-		data, err := ioutil.ReadFile(path)
-	*/
 	// erase before upload
-	success := new(kkProto.Success)
-	//erase := new(kkProto.FirmwareErase)
-	if _, err := kk.keepkeyExchange(&kkProto.FirmwareErase{}, success); err != nil {
-		log.Fatal(err)
+	if _, err := kk.keepkeyExchange(&kkProto.FirmwareErase{}, &kkProto.Success{}); err != nil {
+		return 0, err
 	}
 
+	// upload new firmware
 	up := &kkProto.FirmwareUpload{
 		Payload:     data,
 		PayloadHash: hash[:],
 	}
-	success.Reset()
-	if _, err := kk.keepkeyExchange(up, success); err != nil {
-		log.Fatal(err)
+	if _, err := kk.keepkeyExchange(up, &kkProto.Success{}); err != nil {
+		return 0, err
 	}
-
+	return len(data), nil
 }
 
-/*
-func testExchangeAddress(coinType string) *kk.ExchangeAddress {
-	cp := coinType
-	address := "0x6b67c94fc31510707F9c0f1281AaD5ec9a2EEFF0"
-	rsAddress := "0x6b67c94fc31510707F9c0f1281AaD5ec9a2EEFF0"
-	return &kk.ExchangeAddress{CoinType: &cp, Address: &address, RsAddress: &rsAddress}
-}
-
-*/
 func (kk *Keepkey) EthereumSignTxFromJSON(b []byte) *kkProto.EthereumTxRequest {
 
 	data := make([]byte, 0)
@@ -428,9 +291,7 @@ func (kk *Keepkey) EthereumSignJSONTest(arr []byte) *kkProto.EthereumTxRequest {
 
 func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, nonce uint64, tokenShortcut string) *kkProto.EthereumTxRequest {
 	data := make([]byte, 0)
-	//length := uint32(len(data))
 	test := []byte("6b67c94fc31510707F9c0f1281AaD5ec9a2EEFF0")
-	//to := make([]byte, 20)
 	tokenTo := make([]byte, 20)
 	hex.Decode(tokenTo, test)
 	tokenValue := make([]byte, 32)
@@ -444,8 +305,6 @@ func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, nonce uint64, tokenSh
 	json.Unmarshal([]byte(sampleExchangeResp), &resp)
 	exchangeType := exchangeProtoFromJSON(resp)
 	fmt.Println(exchangeType)
-	//toTest := []uint32{0x8000002C, 0x8000003C, 0x80000000, 0x00000000, 0x00000000}
-	//toTest := []uint32{0x80000000, 0x00000000, 0x00000000}
 	est := &kkProto.EthereumSignTx{
 		AddressN:     derivationPath,
 		AddressType:  &addressType,
@@ -775,41 +634,27 @@ var sampleExchangeResp = `{
         ]
     }`
 
-func (kk *Keepkey) Open(device io.ReadWriter, path string) error {
-
-	//	fmt.Println("Fetching features")
-	features := new(kkProto.Features)
-	timeout := make(chan bool, 1)
-	done := make(chan error, 1)
-	for {
-		go func() {
-			time.Sleep(500 * time.Millisecond)
-
-			fmt.Println("timeout")
-			timeout <- true
-		}()
-		go func() {
-			if _, err := kk.keepkeyExchange(&kkProto.Initialize{}, features); err != nil {
-				done <- err
-			}
-			done <- nil
-		}()
-		// shitty retry till success that doesn't clean up after itself
-		select {
-		case v := <-done:
-			fmt.Println("done")
-			return v
-		case <-timeout:
-			fmt.Println("select timeout")
-			break
-		}
-		fmt.Println("Timedout trying again")
+// TODO: can i get this reflectively from proto file?
+func isDebugMessage(req interface{}) bool {
+	switch req.(type) {
+	case *kkProto.DebugLinkDecision, *kkProto.DebugLinkFillConfig, *kkProto.DebugLinkGetState:
+		return true
 	}
-
-	return nil
+	return false
 }
 
+// keepkeyExchange sends a request to the device and streams back the results
+// if multiple results are possible the index of the result message is also returned
+// based on trezorExchange()
+// in https://github.com/go-ethereum/accounts/usbwallet/trezor.go
 func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) (int, error) {
+
+	device := kk.device
+	debug := false
+	if isDebugMessage(req) && kk.debug != nil {
+		device = kk.debug
+		debug = true
+	}
 
 	// Construct message payload to chunk up
 	data, err := proto.Marshal(req)
@@ -817,7 +662,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		return 0, err
 	}
 	payload := make([]byte, 8+len(data))
-	copy(payload, []byte{0x23, 0x23})
+	copy(payload, []byte{0x23, 0x23}) // ## header
 	binary.BigEndian.PutUint16(payload[2:], kkProto.Type(req))
 	binary.BigEndian.PutUint32(payload[4:], uint32(len(data)))
 	copy(payload[8:], data)
@@ -837,12 +682,15 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 			payload = nil
 		}
 		// send over to the device
-
-		// TODO: remove this dependency
-		//		log.Println("Data chunk sent to keepkey", chunk)
-		if _, err := kk.device.Write(chunk); err != nil {
+		if _, err := device.Write(chunk); err != nil {
 			return 0, err
 		}
+	}
+
+	// TODO; support debug requests that return data
+	// don't wait for response if sending debug buttonPress
+	if debug {
+		return 0, nil
 	}
 
 	// stream the reply back in 64 byte chunks
@@ -852,11 +700,9 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	)
 	for {
 		// Read next chunk
-		//		log.Println("preparing to read chunk")
-		if _, err := io.ReadFull(kk.device, chunk); err != nil {
+		if _, err := io.ReadFull(device, chunk); err != nil {
 			return 0, err
 		}
-		//		log.Println("Data chunk received from keepkey", "chunk", hexutil.Bytes(chunk))
 
 		//TODO: check transport header
 
@@ -870,7 +716,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		} else {
 			payload = chunk[1:]
 		}
-		// Append to the relpy and stop when filled up
+		// Append to the reply and stop when filled up
 		if left := cap(reply) - len(reply); left > len(payload) {
 			reply = append(reply, payload...)
 		} else {
@@ -892,9 +738,10 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		// We are waiting for user confirmation. acknowledge and wait
 		fmt.Println("Awaiting user button press")
 		if kk.debug != nil {
-			//t := true
-			//fmt.Println("sending debug press")
+			t := true
+			fmt.Println("sending debug press")
 			//kk.keepkeyDebug(&kkProto.DebugLinkDecision{YesNo: &t}, results...)
+			kk.keepkeyExchange(&kkProto.DebugLinkDecision{YesNo: &t}, &kkProto.Success{})
 		}
 		return kk.keepkeyExchange(&kkProto.ButtonAck{}, results...)
 	}
@@ -908,109 +755,4 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		expected[i] = kkProto.Name(kkProto.Type(res))
 	}
 	return 0, fmt.Errorf("keepkey: expected reply types %s, got %s", expected, kkProto.Name(kind))
-}
-
-func (kk *Keepkey) keepkeyDebug(req proto.Message, results ...proto.Message) (int, error) {
-
-	// Construct message payload to chunk up
-	data, err := proto.Marshal(req)
-	if err != nil {
-		return 0, err
-	}
-	payload := make([]byte, 8+len(data))
-	copy(payload, []byte{0x23, 0x23})
-	binary.BigEndian.PutUint16(payload[2:], kkProto.Type(req))
-	binary.BigEndian.PutUint32(payload[4:], uint32(len(data)))
-	copy(payload[8:], data)
-
-	// stream all the chunks to the device
-	chunk := make([]byte, 64)
-	chunk[0] = 0x3f // HID Magic number???
-
-	for len(payload) > 0 {
-		// create the message to stream and pad with zeroes if necessary
-		if len(payload) > 63 {
-			copy(chunk[1:], payload[:63])
-			payload = payload[63:]
-		} else {
-			copy(chunk[1:], payload)
-			copy(chunk[1+len(payload):], make([]byte, 63-len(payload)))
-			payload = nil
-		}
-		// send over to the device
-
-		// TODO: remove this dependency
-		//		log.Println("Data chunk sent to keepkey", chunk)
-		if _, err := kk.debug.Write(chunk); err != nil {
-			return 0, err
-		}
-	}
-	fmt.Println("Sent debug request")
-	return 0, nil
-
-	/*
-		// stream the reply back in 64 byte chunks
-		var (
-			kind  uint16
-			reply []byte
-		)
-		for {
-			// Read next chunk
-			//		log.Println("preparing to read chunk")
-			if _, err := io.ReadFull(kk.debug, chunk); err != nil {
-				return 0, err
-			}
-			//		log.Println("Data chunk received from keepkey", "chunk", hexutil.Bytes(chunk))
-
-			//TODO: check transport header
-
-			//if it is the first chunk, retreive the reply message type and total message length
-			var payload []byte
-
-			if len(reply) == 0 {
-				kind = binary.BigEndian.Uint16(chunk[3:5])
-				reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
-				payload = chunk[9:]
-			} else {
-				payload = chunk[1:]
-			}
-			// Append to the relpy and stop when filled up
-			if left := cap(reply) - len(reply); left > len(payload) {
-				reply = append(reply, payload...)
-			} else {
-				reply = append(reply, payload[:left]...)
-				break
-			}
-		}
-
-		// Try to parse the reply into the requested reply message
-		if kind == uint16(kkProto.MessageType_MessageType_Failure) {
-			// keepkey returned a failure, extract and return the message
-			failure := new(kkProto.Failure)
-			if err := proto.Unmarshal(reply, failure); err != nil {
-				return 0, err
-			}
-			return 0, errors.New("keepkey: " + failure.GetMessage())
-		}
-		if kind == uint16(kkProto.MessageType_MessageType_ButtonRequest) {
-			// We are waiting for user confirmation. acknowledge and wait
-			fmt.Println("Awaiting user button press")
-			if kk.debug != nil {
-				t := true
-				fmt.Println("sending debug button press")
-				kk.keepkeyDebug(&kkProto.DebugLinkDecision{YesNo: &t}, results...)
-			}
-			return kk.keepkeyExchange(&kkProto.ButtonAck{}, results...)
-		}
-		for i, res := range results {
-			if kkProto.Type(res) == kind {
-				return i, proto.Unmarshal(reply, res)
-			}
-		}
-		expected := make([]string, len(results))
-		for i, res := range results {
-			expected[i] = kkProto.Name(kkProto.Type(res))
-		}
-		return 0, fmt.Errorf("keepkey: expected reply types %s, got %s", expected, kkProto.Name(kind))
-	*/
 }

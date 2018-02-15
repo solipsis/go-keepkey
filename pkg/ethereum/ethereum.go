@@ -13,13 +13,13 @@ func EthTxAsProto(tx *kk.EthereumTx, nodePath []uint32) *kkProto.EthereumSignTx 
 
 	data := make([]byte, len(tx.Payload))
 	copy(data, tx.Payload)
-	length := len(data)
+	//length := len(data)
 
 	// For proper rlp encoding when the value of the  parameter is zero,
 	// the device expects an empty byte array instead of
 	// a byte array with a value of zero
 	if tx.Amount != nil {
-		est.Amount = emptyOrVal(tx.Amount)
+		est.Value = emptyOrVal(tx.Amount)
 	}
 	if tx.GasLimit != nil {
 		est.GasLimit = emptyOrVal(tx.GasLimit)
@@ -51,6 +51,7 @@ func NewTransaction(nonce uint64, recipient string, amount, gasLimit, gasPrice *
 		Amount:    new(big.Int),
 		GasLimit:  new(big.Int),
 		GasPrice:  new(big.Int),
+		Data:      data,
 		//V:         new(big.Int),
 		//R:         new(big.Int),
 		//S:         new(big.Int),
@@ -68,8 +69,12 @@ func NewTransaction(nonce uint64, recipient string, amount, gasLimit, gasPrice *
 	return &tx
 }
 
-//
-func NewTokenTransaction(nonce uint64, tokenRecipient string, tokenAmount, gasLimit, gasPrice *big.Int) *kk.EthereumTx {
-
-	return nil
+func NewTokenTransaction(tx *kk.EthereumTx, tShortcut, tRecipient string, tValue *big.Int) *kk.TokenTx {
+	tokenTx := &kk.TokenTx{
+		EthereumTx:    tx,
+		TokenShortcut: tShortcut,
+		TokenTo:       tRecipient,
+		TokenValue:    tValue,
+	}
+	return tokenTx
 }

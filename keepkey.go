@@ -5,6 +5,7 @@ import "math/big"
 type EthereumTx struct {
 	Nonce     uint64
 	Payload   []byte
+	Data      []byte
 	Amount    *big.Int
 	GasPrice  *big.Int
 	GasLimit  *big.Int
@@ -17,8 +18,8 @@ type EthereumTx struct {
 }
 
 type TokenTx struct {
-	EthereumTx
-	TokenRecipient string
-	TokenAmount    *big.Int
-	TokenSymbol    string
+	*EthereumTx
+	TokenTo       string
+	TokenValue    *big.Int
+	TokenShortcut string
 }
