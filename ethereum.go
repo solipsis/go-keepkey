@@ -1,11 +1,10 @@
-package ethereum
+package gokeepkey
 
 import "math/big"
-import kk "github.com/solipsis/go-keepkey"
 import kkProto "github.com/solipsis/go-keepkey/internal"
 
 // should take interface
-func EthTxAsProto(tx *kk.EthereumTx, nodePath []uint32) *kkProto.EthereumSignTx {
+func EthTxAsProto(tx *EthereumTx, nodePath []uint32) *kkProto.EthereumSignTx {
 
 	est := &kkProto.EthereumSignTx{
 		AddressN: nodePath,
@@ -39,13 +38,13 @@ func emptyOrVal(val *big.Int) []byte {
 	return val.Bytes()
 }
 
-func NewTransaction(nonce uint64, recipient string, amount, gasLimit, gasPrice *big.Int, data []byte) *kk.EthereumTx {
+func NewTransaction(nonce uint64, recipient string, amount, gasLimit, gasPrice *big.Int, data []byte) *EthereumTx {
 	if len(data) > 0 {
 		cp := make([]byte, len(data))
 		copy(cp, data)
 		data = cp
 	}
-	tx := kk.EthereumTx{
+	tx := EthereumTx{
 		Nonce:     nonce,
 		Recipient: recipient,
 		Amount:    new(big.Int),
@@ -69,8 +68,8 @@ func NewTransaction(nonce uint64, recipient string, amount, gasLimit, gasPrice *
 	return &tx
 }
 
-func NewTokenTransaction(tx *kk.EthereumTx, tShortcut, tRecipient string, tValue *big.Int) *kk.TokenTx {
-	tokenTx := &kk.TokenTx{
+func NewTokenTransaction(tx *EthereumTx, tShortcut, tRecipient string, tValue *big.Int) *TokenTx {
+	tokenTx := &TokenTx{
 		EthereumTx:    tx,
 		TokenShortcut: tShortcut,
 		TokenTo:       tRecipient,
