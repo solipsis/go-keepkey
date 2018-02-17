@@ -31,6 +31,7 @@ func newKeepkey() *Keepkey {
 	}
 }
 
+/*
 // LoadDevice wipes the keepkey and initializes with the provided seedwords and pin code
 // Pin will be disabled on the device if len(pin) == 0
 func (kk *Keepkey) LoadDevice(words []string, pin string) error {
@@ -57,6 +58,7 @@ func (kk *Keepkey) LoadDevice(words []string, pin string) error {
 
 	return nil
 }
+*/
 
 // TODO: do HID devices need to be closed?
 func (kk *Keepkey) Close() {
@@ -112,6 +114,7 @@ func GetDevice() (*Keepkey, error) {
 	return kk, nil
 }
 
+/*
 // GetPublicKey requests public key from the device according to a bip44 node path
 func (kk *Keepkey) GetPublicKey(path []uint32) (*kkProto.HDNodeType, string, error) {
 
@@ -129,6 +132,7 @@ func (kk *Keepkey) GetPublicKey(path []uint32) (*kkProto.HDNodeType, string, err
 	// TODO: return node instead???
 	return pubkey.Node, *pubkey.Xpub, nil
 }
+*/
 
 // ApplyPolicy enables or disables a named policy on the device
 func (kk *Keepkey) ApplyPolicy(name string, enabled bool) error {
@@ -220,9 +224,95 @@ func (kk *Keepkey) FirmwareErase() error {
 	return nil
 }
 
+// GetEntropy requests sample data from the hardware RNG
 func (kk *Keepkey) GetEntropy(size uint32) ([]byte, error) {
-	kkProto.GetEntropy
 
+	buf := make([]byte, 0)
+	entropy := new(kkProto.Entropy)
+	if _, err := kk.keepkeyExchange(&kkProto.GetEntropy{Size: &size}, entropy); err != nil {
+		return []byte{}, err
+	}
+	return append(buf, entropy.Entropy...), nil
+}
+
+type HDNode struct {
+	*kkProto.HDNodeType
+}
+
+// GetPublicKey asks the device for a public key corresponding to a nodePath and curve name.
+// Returns the hdnode, the XPUB as a string and a possidble error
+// This may prompt the user for a passphrase
+func (kk *Keepkey) GetPublicKey(path []uint32, curveName string, showDisplay bool) (*HDNode, string, error) {
+
+	getPubKey := &kkProto.GetPublicKey{
+		AddressN:       path,
+		EcdsaCurveName: &curveName,
+		ShowDisplay:    &showDisplay,
+	}
+	pubKey := new(kkProto.PublicKey)
+	if _, err := kk.keepkeyExchange(getPubKey, pubKey); err != nil {
+		return nil, "", err
+	}
+	return &HDNode{pubKey.Node}, *pubKey.Xpub, nil
+}
+
+// LoadDevice loads a provided seed onto the device and applies the provided settings
+// including setting a pin/device label, enabling/disabling the passphrase, and whether to
+// check the checksum of the provided mnemonic
+func (kk *Keepkey) LoadDevice(mnemonic []string, pin, label string, passphrase, skipChecksum bool) error {
+
+	// The device expects the mnemonic as a string of space seperated words
+	mnemonicStr := strings.Join(mnemonic, " ")
+	load := &kkProto.LoadDevice{
+		Mnemonic:             &mnemonicStr,
+		PassphraseProtection: &passphrase,
+		SkipChecksum:         &skipChecksum,
+	}
+	if pin != "" {
+		load.Pin = &pin
+	}
+	if label != "" {
+		load.Label = &label
+	}
+
+	// Load device using provided settings
+	if _, err := kk.keepkeyExchange(load, &kkProto.Success{}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Device generated entropy levels
+type entropyStrength uint32
+
+const (
+	Entropy128 entropyStrength = 128
+	Entropy192 entropyStrength = 192
+	Entropy256 entropyStrength = 256
+)
+
+// ResetDevice generates a new seed using device RNG for entropy and applies the provided settings
+// The device must be uninitialized  before calling this method. This can be achieved by calling WipeDevice()
+// The device entropy strength must be 128, 192, or 256
+func (kk *Keepkey) ResetDevice(strength entropyStrength, addtlEntropy []byte, showRandom, passphrase, pin bool, label string) error {
+
+	deviceEntropyStrength := uint32(strength)
+	reset := &kkProto.ResetDevice{
+		Strength:             &deviceEntropyStrength,
+		DisplayRandom:        &showRandom,
+		PassphraseProtection: &passphrase,
+		PinProtection:        &pin,
+		Label:                &label,
+	}
+	if _, err := kk.keepkeyExchange(reset, &kkProto.EntropyRequest{}); err != nil {
+		return err
+	}
+
+	// The device will respond asking for additional entropy from the computer
+	if _, err := kk.keepkeyExchange(&kkProto.EntropyAck{Entropy: addtlEntropy}, &kkProto.Success{}); err != nil {
+		return err
+	}
+	return nil
 }
 
 // UploadFirmware reads the contents of a given filepath and uploads data from the file
