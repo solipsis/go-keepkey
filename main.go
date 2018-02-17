@@ -156,6 +156,75 @@ func (kk *Keepkey) Initialize(device *hid.Device) (*kkProto.Features, error) {
 	return features, nil
 }
 
+// Returns the features and other device information such as the version, label, and supported coins
+func (kk *Keepkey) GetFeatures() (*kkProto.Features, error) {
+
+	features := new(kkProto.Features)
+	if _, err := kk.keepkeyExchange(&kkProto.GetFeatures{}, features); err != nil {
+		return nil, err
+	}
+	return features, nil
+}
+
+// Ping the device. If a message is provided it will be shown on the device screen and returned
+// in the success message. Optionally require a button press, pin, or passphrase to continue
+func (kk *Keepkey) Ping(msg string, button, pin, password bool) (*kkProto.Success, error) {
+
+	ping := &kkProto.Ping{
+		Message:              &msg,
+		ButtonProtection:     &button,
+		PinProtection:        &pin,
+		PassphraseProtection: &password,
+	}
+	success := new(kkProto.Success)
+	if _, err := kk.keepkeyExchange(ping, success); err != nil {
+		return nil, err
+	}
+	return success, nil
+}
+
+// TODO:
+// ChangePin requests setting/changing/removing the pin
+//func (kk *Keepkey) ChangePin(remove bool) (*kkProto.ChangePin, error) {
+/*
+	change := &kkProto.ChangePin{
+		Remove: &remove,
+	}
+	resp := new(kkProto.PinMatrixRequest)
+	if _, err := kk.KeepkeyExchange(change, resp); err != nil {
+		return nil, err
+	}
+
+	// TODO: get user input twice
+	pin1 := &kkProto.PinMatrixAck{
+	}
+	// TODO: remove vs update
+*/
+//}
+
+// WipeDevice wipes all sensitive data and settings
+func (kk *Keepkey) WipeDevice() error {
+
+	if _, err := kk.keepkeyExchange(&kkProto.WipeDevice{}, &kkProto.Success{}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// FirmwareErase askes the device to erase its firmware
+func (kk *Keepkey) FirmwareErase() error {
+
+	if _, err := kk.keepkeyExchange(&kkProto.FirmwareErase{}, &kkProto.Success{}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (kk *Keepkey) GetEntropy(size uint32) ([]byte, error) {
+	kkProto.GetEntropy
+
+}
+
 // UploadFirmware reads the contents of a given filepath and uploads data from the file
 // to the device. It returns the number of bytes written and an error
 func (kk *Keepkey) UploadFirmware(path string) (int, error) {
