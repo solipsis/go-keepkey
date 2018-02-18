@@ -29,6 +29,15 @@ func TestGetFeatures(t *testing.T) {
 	}
 }
 
+func TestSignMessage(t *testing.T) {
+	eth := []uint32{0x8000002C, 0x8000003C, 0x80000000, 0x00000000, 0x00000000}
+	addr, sig, err := kk.SignMessage(eth, []byte("Hello Msg"), "Dash")
+	if err != nil {
+		t.Fail()
+	}
+	fmt.Println("Addr:", addr, "Sig:", string(sig))
+}
+
 func TestEncryptDecrypt(t *testing.T) {
 	eth := []uint32{0x8000002C, 0x8000003C, 0x80000000, 0x00000000, 0x00000000}
 	enc, err := kk.EncryptKeyValue(eth, "solipsis", []byte("potato0000000000"))

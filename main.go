@@ -1,6 +1,7 @@
 package gokeepkey
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
@@ -10,7 +11,9 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/karalabe/hid"
@@ -168,6 +171,173 @@ func (kk *Keepkey) GetFeatures() (*kkProto.Features, error) {
 		return nil, err
 	}
 	return features, nil
+}
+
+// ClearSession clears cached session values such as the pin and passphrase
+func (kk *Keepkey) ClearSession() error {
+
+	_, err := kk.keepkeyExchange(&kkProto.ClearSession{}, &kkProto.Success{})
+	return err
+}
+
+// ApplySettings changes the label, language, and enabling/disabling the passphrase
+// The default language is english
+func (kk *Keepkey) ApplySettings(label, language string, enablePassphrase bool) error {
+
+	if language == "" {
+		language = "english"
+	}
+
+	settings := &kkProto.ApplySettings{
+		Label:         &label,
+		Language:      &language,
+		UsePassphrase: &enablePassphrase,
+	}
+	_, err := kk.keepkeyExchange(settings, &kkProto.Success{})
+	return err
+}
+
+/*
+TODO: need to deal with MultisigRedeemScriptType
+// Request: Ask device for address corresponding to address_n path
+// @next PassphraseRequest
+// @next Address
+// @next Failure
+type GetAddress struct {
+	AddressN         []uint32                          `protobuf:"varint,1,rep,name=address_n,json=addressN" json:"address_n,omitempty"`
+	CoinName         *string                           `protobuf:"bytes,2,opt,name=coin_name,json=coinName,def=Bitcoin" json:"coin_name,omitempty"`
+	ShowDisplay      *bool                             `protobuf:"varint,3,opt,name=show_display,json=showDisplay" json:"show_display,omitempty"`
+	Multisig         *kkProto.MultisigRedeemScriptType `protobuf:"bytes,4,opt,name=multisig" json:"multisig,omitempty"`
+	ScriptType       *kkProto.InputScriptType          `protobuf:"varint,5,opt,name=script_type,json=scriptType,enum=InputScriptType,def=0" json:"script_type,omitempty"`
+	XXX_unrecognized []byte                            `json:"-"`
+}
+
+func (kk *Keepkey) GetAddress(path []uint32, coinName string, display bool) error {
+	kkProto.GetAddress()
+}
+*/
+
+// Request: Ask device to sign message
+// @next MessageSignature
+// @next Failure
+type SignMessage struct {
+	AddressN         []uint32 `protobuf:"varint,1,rep,name=address_n,json=addressN" json:"address_n,omitempty"`
+	Message          []byte   `protobuf:"bytes,2,req,name=message" json:"message,omitempty"`
+	CoinName         *string  `protobuf:"bytes,3,opt,name=coin_name,json=coinName,def=Bitcoin" json:"coin_name,omitempty"`
+	XXX_unrecognized []byte   `json:"-"`
+}
+
+// Response: Signed message
+// @prev SignMessage
+type MessageSignature struct {
+	Address          *string `protobuf:"bytes,1,opt,name=address" json:"address,omitempty"`
+	Signature        []byte  `protobuf:"bytes,2,opt,name=signature" json:"signature,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (kk *Keepkey) SignMessage(path []uint32, msg []byte, coinName string) (string, []byte, error) {
+
+	sign := &kkProto.SignMessage{
+		AddressN: path,
+		Message:  msg,
+		CoinName: &coinName,
+	}
+
+	sig := new(kkProto.MessageSignature)
+	if _, err := kk.keepkeyExchange(sign, sig); err != nil {
+		return "", []byte{}, err
+	}
+	return sig.GetAddress(), sig.GetSignature(), nil
+}
+
+// VerifyMessage verifies a signed message
+func (kk *Keepkey) VerifyMessage(addr, coinName string, msg, sig []byte) error {
+
+	verify := &kkProto.VerifyMessage{
+		Address:   &addr,
+		Signature: sig,
+		Message:   msg,
+		CoinName:  &coinName,
+	}
+
+	_, err := kk.keepkeyExchange(verify, &kkProto.Success{})
+	return err
+}
+
+type RecoveryDevice struct {
+	WordCount            *uint32 `protobuf:"varint,1,opt,name=word_count,json=wordCount" json:"word_count,omitempty"`
+	PassphraseProtection *bool   `protobuf:"varint,2,opt,name=passphrase_protection,json=passphraseProtection" json:"passphrase_protection,omitempty"`
+	PinProtection        *bool   `protobuf:"varint,3,opt,name=pin_protection,json=pinProtection" json:"pin_protection,omitempty"`
+	Language             *string `protobuf:"bytes,4,opt,name=language,def=english" json:"language,omitempty"`
+	Label                *string `protobuf:"bytes,5,opt,name=label" json:"label,omitempty"`
+	EnforceWordlist      *bool   `protobuf:"varint,6,opt,name=enforce_wordlist,json=enforceWordlist" json:"enforce_wordlist,omitempty"`
+	UseCharacterCipher   *bool   `protobuf:"varint,7,opt,name=use_character_cipher,json=useCharacterCipher" json:"use_character_cipher,omitempty"`
+	XXX_unrecognized     []byte  `json:"-"`
+}
+
+//TODO: use promptui for perdy prompting
+func promptCharacter() string {
+	fmt.Println("enter a letter then press <Enter>. If the device shows the completed word with a checkmark press <space><enter> blah blah blah this interface sucks")
+	sc := bufio.NewScanner(os.Stdin)
+	sc.Scan()
+	return sc.Text()
+}
+func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordlist, useCharacterCipher bool) error {
+
+	recover := &kkProto.RecoveryDevice{
+		WordCount:          &numWords,
+		EnforceWordlist:    &enforceWordlist,
+		UseCharacterCipher: &useCharacterCipher,
+	}
+
+	if useCharacterCipher {
+		time.Sleep(1000)
+		if _, err := kk.keepkeyExchange(recover, &kkProto.CharacterRequest{}); err != nil {
+			return err
+		}
+
+		for i := 0; i < 2000; i++ {
+			//time.Sleep(1 * time.Second)
+			fmt.Println("character request")
+			lets := "alco"
+			s := string(lets[i%4])
+			//s = promptCharacter()
+			d := false
+			req := new(kkProto.CharacterRequest)
+			s = " "
+			if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Character: &s, Done: &d}, req); err != nil {
+				fmt.Println(req)
+				return err
+			}
+			fmt.Println("resp", req)
+			if i%4 == 3 {
+				//d = true
+				ent := " "
+				if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Character: &ent}, req); err != nil {
+					fmt.Println(req)
+					return err
+				}
+			}
+		}
+	} else {
+
+		if _, err := kk.keepkeyExchange(recover, &kkProto.WordRequest{}); err != nil {
+			return err
+		}
+
+		for i := uint32(0); i < numWords; i++ {
+			time.Sleep(5 * time.Second)
+			w := "alcohol"
+			word := &kkProto.WordAck{Word: &w}
+			if _, err := kk.keepkeyExchange(word, &kkProto.WordRequest{}); err != nil {
+				return err
+			}
+		}
+		fmt.Println("Device recovered")
+		return nil
+	}
+	return nil
+
 }
 
 // Ping the device. If a message is provided it will be shown on the device screen and returned
@@ -405,6 +575,25 @@ func (kk *Keepkey) UploadFirmware(path string) (int, error) {
 		return 0, err
 	}
 	return len(data), nil
+}
+
+// EthereumGetAddress returns the ethereum address associated with the given node path
+// Optionally you can display  the address on the screen
+func (kk *Keepkey) EthereumGetAddress(path []uint32, display bool) ([]byte, error) {
+
+	getAddr := &kkProto.EthereumGetAddress{
+		AddressN:    path,
+		ShowDisplay: &display,
+	}
+
+	addr := new(kkProto.EthereumAddress)
+	if _, err := kk.keepkeyExchange(getAddr, addr); err != nil {
+		return []byte{}, err
+	}
+
+	buf := make([]byte, len(addr.Address))
+	copy(buf, addr.Address)
+	return buf, nil
 }
 
 func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, tx *EthereumTx) (*kkProto.EthereumTxRequest, error) {
