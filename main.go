@@ -315,6 +315,66 @@ func (kk *Keepkey) ResetDevice(strength entropyStrength, addtlEntropy []byte, sh
 	return nil
 }
 
+// Cancel aborts the last device action that required user interaction
+// It can follow a button request, passphrase request, or pin request
+func (kk *Keepkey) Cancel() error {
+
+	_, err := kk.keepkeyExchange(&kkProto.Cancel{})
+	return err
+}
+
+// *
+// Request: Ask device to encrypt or decrypt value of given key
+// @next CipheredKeyValue
+// @next Failure
+type CipherKeyValue struct {
+	AddressN     []uint32 `protobuf:"varint,1,rep,name=address_n,json=addressN" json:"address_n,omitempty"`
+	Key          *string  `protobuf:"bytes,2,opt,name=key" json:"key,omitempty"`
+	Value        []byte   `protobuf:"bytes,3,opt,name=value" json:"value,omitempty"`
+	Encrypt      *bool    `protobuf:"varint,4,opt,name=encrypt" json:"encrypt,omitempty"`
+	AskOnEncrypt *bool    `protobuf:"varint,5,opt,name=ask_on_encrypt,json=askOnEncrypt" json:"ask_on_encrypt,omitempty"`
+	AskOnDecrypt *bool    `protobuf:"varint,6,opt,name=ask_on_decrypt,json=askOnDecrypt" json:"ask_on_decrypt,omitempty"`
+	Iv           []byte   `protobuf:"bytes,7,opt,name=iv" json:"iv,omitempty"`
+}
+
+// CipherKeyValue encrypts or decrypts a value with a given key, nodepath, and initializationVector
+// This method encrypts if encrypt is true and decrypts if false, the confirm paramater determines wether
+// the user is prompted on the device. See EncryptKeyValue() and DecryptKeyValue() for convenience methods
+func (kk *Keepkey) CipherKeyValue(path []uint32, key string, val, IV []byte, encrypt, confirm bool) ([]byte, error) {
+
+	// TODO: do I want to pad to 16 bytes or error?
+	if len(val)%16 != 0 {
+		return []byte{}, errors.New("Length of value to encrypt/decrypt must be multiple of 16 bytes")
+	}
+
+	cipher := &kkProto.CipherKeyValue{
+		AddressN:     path,
+		Key:          &key,
+		Value:        val,
+		Encrypt:      &encrypt,
+		AskOnEncrypt: &confirm,
+		AskOnDecrypt: &confirm,
+	}
+	data := make([]byte, 0)
+	res := new(kkProto.CipheredKeyValue)
+	if _, err := kk.keepkeyExchange(cipher, res); err != nil {
+		return data, err
+	}
+	return append(data, res.Value...), nil
+}
+
+// EncryptKeyValue is a convenience method around encrypting with CipherKeyValue().
+// For more granular control of the process use CipherKeyValue()
+func (kk *Keepkey) EncryptKeyValue(path []uint32, key string, val []byte) ([]byte, error) {
+	return kk.CipherKeyValue(path, key, val, []byte{}, true, false)
+}
+
+// DecryptKeyValue is a convenience method around decrypting with CipherKeyValue().
+// For more granular control of the process use CipherKeyValue()
+func (kk *Keepkey) DecryptKeyValue(path []uint32, key string, val []byte) ([]byte, error) {
+	return kk.CipherKeyValue(path, key, val, []byte{}, false, false)
+}
+
 // UploadFirmware reads the contents of a given filepath and uploads data from the file
 // to the device. It returns the number of bytes written and an error
 func (kk *Keepkey) UploadFirmware(path string) (int, error) {

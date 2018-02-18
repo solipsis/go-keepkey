@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"testing"
 )
 
@@ -30,6 +29,20 @@ func TestGetFeatures(t *testing.T) {
 	}
 }
 
+func TestEncryptDecrypt(t *testing.T) {
+	eth := []uint32{0x8000002C, 0x8000003C, 0x80000000, 0x00000000, 0x00000000}
+	enc, err := kk.EncryptKeyValue(eth, "solipsis", []byte("potato0000000000"))
+	if err != nil {
+		fmt.Println(err)
+		t.Fail()
+	}
+	dec, err := kk.DecryptKeyValue(eth, "solipsis", enc)
+	if err != nil || string(dec) != "potato0000000000" {
+		fmt.Println(err, string(dec))
+		t.Fail()
+	}
+}
+
 func TestPing(t *testing.T) {
 	t.Log("Testing Ping")
 	s, err := kk.Ping("Hello", false, false, false)
@@ -40,6 +53,16 @@ func TestPing(t *testing.T) {
 	if err != nil || s.GetMessage() != "Button" {
 		t.Fail()
 	}
+}
+
+func TestCancelButton(t *testing.T) {
+	//go kk.Ping("Cancel me", true, false, false)
+	//if err != nil {
+	//t.Fail()
+	//}
+	//for i := 0; i < 10000; i++ {
+	//kk.Cancel()
+	//}
 }
 
 func TestGetPublicKey(t *testing.T) {
@@ -55,9 +78,11 @@ func TestGetPublicKey(t *testing.T) {
 }
 
 func TestLoadDevice(t *testing.T) {
-	words := "water explain wink proof size gift sort silly collect differ anger yard"
-	if err := kk.LoadDevice(strings.Split(words, " "), "", "", false, true); err != nil {
-		t.Log(err)
-		t.Fail()
-	}
+	/*
+		words := "water explain wink proof size gift sort silly collect differ anger yard"
+		if err := kk.LoadDevice(strings.Split(words, " "), "", "", false, true); err != nil {
+			t.Log(err)
+			t.Fail()
+		}
+	*/
 }
