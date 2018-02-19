@@ -10,6 +10,8 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -162,7 +164,7 @@ func (kk *Keepkey) Initialize(device *hid.Device) (*kkProto.Features, error) {
 	return features, nil
 }
 
-// Returns the features and other device information such as the version, label, and supported coins
+// GetFeatures returns the features and other device information such as the version, label, and supported coins
 func (kk *Keepkey) GetFeatures() (*kkProto.Features, error) {
 
 	features := new(kkProto.Features)
@@ -263,7 +265,7 @@ func (kk *Keepkey) VerifyMessage(addr, coinName string, msg, sig []byte) error {
 	return err
 }
 
-//TODO: use colored text around word and letter numbers for visibility
+// Prompt the user for the next character during the seed recovery process
 func promptCharacter(word, char uint32) (string, error) {
 
 	// Input validation function
@@ -392,24 +394,49 @@ func (kk *Keepkey) Ping(msg string, button, pin, password bool) (*kkProto.Succes
 	return success, nil
 }
 
-// TODO:
+// Prompt the user for their pin
+func promptPin() (string, error) {
+	cyan := color.New(color.FgCyan).FprintFunc()
+	magenta := color.New(color.FgMagenta).FprintFunc()
+	magenta(os.Stdout, "Enter your pin using the corresponding positions shown on your device\n")
+	cyan(os.Stdout, "7 | 8 | 9\n")
+	cyan(os.Stdout, "4 | 5 | 6\n")
+	cyan(os.Stdout, "1 | 2 | 3\n\n")
+
+	// validation function for prompt testing if input is a valid number
+	validate := func(in string) error {
+		if _, err := strconv.Atoi(in); err != nil {
+			return errors.New("Pin must be a number")
+		}
+		return nil
+	}
+
+	// Prompt the user for their pin
+	prompt := promptui.Prompt{
+		Label:    "Pin",
+		Validate: validate,
+	}
+	res, err := prompt.Run()
+	if err != nil {
+		return "", err
+	}
+	return res, nil
+}
+
 // ChangePin requests setting/changing/removing the pin
-//func (kk *Keepkey) ChangePin(remove bool) (*kkProto.ChangePin, error) {
-/*
+func (kk *Keepkey) ChangePin(remove bool) error {
+
+	//TODO: separate change vs remove functions
 	change := &kkProto.ChangePin{
 		Remove: &remove,
 	}
-	resp := new(kkProto.PinMatrixRequest)
-	if _, err := kk.KeepkeyExchange(change, resp); err != nil {
-		return nil, err
-	}
 
-	// TODO: get user input twice
-	pin1 := &kkProto.PinMatrixAck{
+	//  User may be prompted for pin up to 2 times
+	if _, err := kk.keepkeyExchange(change, &kkProto.PinMatrixRequest{}, &kkProto.Success{}); err != nil {
+		return err
 	}
-	// TODO: remove vs update
-*/
-//}
+	return nil
+}
 
 // WipeDevice wipes all sensitive data and settings
 func (kk *Keepkey) WipeDevice() error {
@@ -866,8 +893,8 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		}
 		return 0, errors.New("keepkey: " + failure.GetMessage())
 	}
+	// handle button requests and forward the results
 	if kind == uint16(kkProto.MessageType_MessageType_ButtonRequest) {
-		// We are waiting for user confirmation. acknowledge and wait
 		fmt.Println("Awaiting user button press")
 		if kk.debug != nil {
 			t := true
@@ -876,6 +903,15 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 			kk.keepkeyExchange(&kkProto.DebugLinkDecision{YesNo: &t}, &kkProto.Success{})
 		}
 		return kk.keepkeyExchange(&kkProto.ButtonAck{}, results...)
+	}
+	// handle pin matrix requests and forward the results
+	if kind == uint16(kkProto.MessageType_MessageType_PinMatrixRequest) {
+		fmt.Println("Pin requested")
+		pin, err := promptPin()
+		if err != nil {
+			return 0, err
+		}
+		return kk.keepkeyExchange(&kkProto.PinMatrixAck{Pin: &pin}, results...)
 	}
 	for i, res := range results {
 		if kkProto.Type(res) == kind {
