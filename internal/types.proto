@@ -172,6 +172,8 @@ message CoinType {
 	optional string signed_message_header = 8;
 	optional uint32 bip44_account_path = 9;
 	optional uint32 forkid = 12;
+	optional uint32 decimals = 13;
+	optional string contract_address = 14;
 }
 
 /**
@@ -301,4 +303,5 @@ message ExchangeType {
 	optional string withdrawal_coin_name = 2 [default='Bitcoin'];	// coin type of the received funds
 	repeated uint32 withdrawal_address_n = 3;			    	    // BIP-32 path for received funds
 	repeated uint32 return_address_n = 4;			    	        // BIP-32 path for return address, assumed to be the
-}	
+	                                                                // same as the coin_name of the transaction
+}
