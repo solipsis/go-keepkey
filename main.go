@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/golang/protobuf/proto"
 	"github.com/karalabe/hid"
 	"github.com/manifoldco/promptui"
@@ -262,17 +263,6 @@ func (kk *Keepkey) VerifyMessage(addr, coinName string, msg, sig []byte) error {
 	return err
 }
 
-type RecoveryDevice struct {
-	WordCount            *uint32 `protobuf:"varint,1,opt,name=word_count,json=wordCount" json:"word_count,omitempty"`
-	PassphraseProtection *bool   `protobuf:"varint,2,opt,name=passphrase_protection,json=passphraseProtection" json:"passphrase_protection,omitempty"`
-	PinProtection        *bool   `protobuf:"varint,3,opt,name=pin_protection,json=pinProtection" json:"pin_protection,omitempty"`
-	Language             *string `protobuf:"bytes,4,opt,name=language,def=english" json:"language,omitempty"`
-	Label                *string `protobuf:"bytes,5,opt,name=label" json:"label,omitempty"`
-	EnforceWordlist      *bool   `protobuf:"varint,6,opt,name=enforce_wordlist,json=enforceWordlist" json:"enforce_wordlist,omitempty"`
-	UseCharacterCipher   *bool   `protobuf:"varint,7,opt,name=use_character_cipher,json=useCharacterCipher" json:"use_character_cipher,omitempty"`
-	XXX_unrecognized     []byte  `json:"-"`
-}
-
 //TODO: use colored text around word and letter numbers for visibility
 func promptCharacter(word, char uint32) (string, error) {
 
@@ -283,7 +273,14 @@ func promptCharacter(word, char uint32) (string, error) {
 		}
 		return nil
 	}
-	text := fmt.Sprintf("Enter word #%d letter #%d, or type \"next\" to continue or \"undo\" to go back", word+1, char+1)
+
+	// Pretty colors for prompt
+	green := color.New(color.FgGreen).Add(color.Underline).Add(color.Bold).SprintFunc()
+	magenta := color.New(color.FgMagenta).Add(color.Underline).Add(color.Bold).SprintFunc()
+	blue := color.New(color.FgCyan).SprintFunc()
+
+	text := "Enter | " + green(fmt.Sprintf("word #%d", word+1)) + " | " + magenta(fmt.Sprintf("letter #%d", char+1)) + " |,"
+	text += blue(" or type \"next\" to continue or \"undo\" to go back")
 	prompt := promptui.Prompt{
 		Label:    text,
 		Validate: validate,
@@ -303,6 +300,9 @@ func promptCharacter(word, char uint32) (string, error) {
 	return result, nil
 }
 
+// Recover device initiates the interactive seed recovery process in which the user is asked to input their seed words
+// The useCharacterCipher flag tells the device to recover using the on-screen cypher or through entering
+// the words in a random order. This method must be called on an uninitialized device
 func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordlist, useCharacterCipher bool) error {
 
 	recover := &kkProto.RecoveryDevice{
