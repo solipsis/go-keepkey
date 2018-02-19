@@ -1,7 +1,6 @@
 package gokeepkey
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
@@ -11,12 +10,11 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
-	"os"
 	"strings"
-	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/karalabe/hid"
+	"github.com/manifoldco/promptui"
 	kkProto "github.com/solipsis/go-keepkey/internal"
 )
 
@@ -275,13 +273,36 @@ type RecoveryDevice struct {
 	XXX_unrecognized     []byte  `json:"-"`
 }
 
-//TODO: use promptui for perdy prompting
-func promptCharacter() string {
-	fmt.Println("enter a letter then press <Enter>. If the device shows the completed word with a checkmark press <space><enter> blah blah blah this interface sucks")
-	sc := bufio.NewScanner(os.Stdin)
-	sc.Scan()
-	return sc.Text()
+//TODO: use colored text around word and letter numbers for visibility
+func promptCharacter(word, char uint32) (string, error) {
+
+	// Input validation function
+	validate := func(input string) error {
+		if input != "undo" && input != "next" && (len(input) > 1 || len(input) < 1) {
+			return errors.New("Input must be a single letter (a-z) or \"undo\" or \"next\" ")
+		}
+		return nil
+	}
+	text := fmt.Sprintf("Enter word #%d letter #%d, or type \"next\" to continue or \"undo\" to go back", word+1, char+1)
+	prompt := promptui.Prompt{
+		Label:    text,
+		Validate: validate,
+	}
+
+	// Get input from user
+	result, err := prompt.Run()
+	if err != nil {
+		return "", err
+	}
+
+	// Device uses <space> as signal to proceed to next word
+	if result == "next" {
+		result = " "
+	}
+
+	return result, nil
 }
+
 func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordlist, useCharacterCipher bool) error {
 
 	recover := &kkProto.RecoveryDevice{
@@ -291,50 +312,64 @@ func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordlist, useCharacterC
 	}
 
 	if useCharacterCipher {
-		time.Sleep(1000)
-		if _, err := kk.keepkeyExchange(recover, &kkProto.CharacterRequest{}); err != nil {
+
+		// start the recovery process
+		req := new(kkProto.CharacterRequest)
+		if _, err := kk.keepkeyExchange(recover, req); err != nil {
 			return err
 		}
 
-		for i := 0; i < 2000; i++ {
-			//time.Sleep(1 * time.Second)
-			fmt.Println("character request")
-			lets := "alco"
-			s := string(lets[i%4])
-			//s = promptCharacter()
-			d := false
-			req := new(kkProto.CharacterRequest)
-			s = " "
-			if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Character: &s, Done: &d}, req); err != nil {
-				fmt.Println(req)
+		// Prompt words until we have entered the desired number. Must be 12, 18, or 24
+		var wordNum uint32
+		for wordNum < numWords {
+			s, err := promptCharacter(req.GetWordPos(), req.GetCharacterPos())
+			if err != nil {
 				return err
 			}
-			fmt.Println("resp", req)
-			if i%4 == 3 {
-				//d = true
-				ent := " "
-				if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Character: &ent}, req); err != nil {
-					fmt.Println(req)
+
+			// Undo the previous character if the user typed back
+			if s == "undo" {
+				del := true
+				if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Delete: &del}, req); err != nil {
+					return err
+				}
+				continue
+			}
+
+			// Send the character to the device
+			req = new(kkProto.CharacterRequest)
+			if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Character: &s}, req); err != nil {
+				return err
+			}
+
+			wordNum = req.GetWordPos()
+		}
+
+		// Tell the device we are done
+		done := true
+		if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Done: &done}, req); err != nil {
+			return err
+		}
+
+	} else {
+
+		return errors.New("not implemented")
+		/*
+			if _, err := kk.keepkeyExchange(recover, &kkProto.WordRequest{}); err != nil {
+				return err
+			}
+
+			for i := uint32(0); i < numWords; i++ {
+				time.Sleep(5 * time.Second)
+				w := "alcohol"
+				word := &kkProto.WordAck{Word: &w}
+				if _, err := kk.keepkeyExchange(word, &kkProto.WordRequest{}); err != nil {
 					return err
 				}
 			}
-		}
-	} else {
-
-		if _, err := kk.keepkeyExchange(recover, &kkProto.WordRequest{}); err != nil {
-			return err
-		}
-
-		for i := uint32(0); i < numWords; i++ {
-			time.Sleep(5 * time.Second)
-			w := "alcohol"
-			word := &kkProto.WordAck{Word: &w}
-			if _, err := kk.keepkeyExchange(word, &kkProto.WordRequest{}); err != nil {
-				return err
-			}
-		}
-		fmt.Println("Device recovered")
-		return nil
+			fmt.Println("Device recovered")
+			return nil
+		*/
 	}
 	return nil
 
