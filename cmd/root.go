@@ -12,7 +12,10 @@ import (
 var kk *keepkey.Keepkey
 
 // Button, Pin, and passphrase protection
-var button, pin, passphrase bool
+var buttonProtection, pinProtection, passphraseProtection bool
+
+// setting label and pin
+var label, pin string
 
 func init() {
 	cobra.OnInitialize(connectDevice)

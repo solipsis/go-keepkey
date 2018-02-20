@@ -80,14 +80,14 @@ func GetDevice() (*Keepkey, error) {
 	// TODO: add support for multiple keepkeys
 	var deviceInfo, debugInfo hid.DeviceInfo
 	for _, info := range hid.Enumerate(kk.vendorID, 0) {
-		fmt.Println("info:", info)
+		//fmt.Println("info:", info)
 		if info.ProductID == kk.productID {
 			// seperate connection to debug interface if debug link is enabled
 			if strings.HasSuffix(info.Path, "1") {
-				fmt.Println("Debug: ", info)
+				//fmt.Println("Debug: ", info)
 				debugInfo = info
 			} else {
-				fmt.Println("Device: ", info)
+				//fmt.Println("Device: ", info)
 				deviceInfo = info
 			}
 		}
@@ -349,7 +349,7 @@ func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordlist, useCharacterC
 
 		// Tell the device we are done
 		done := true
-		if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Done: &done}, req); err != nil {
+		if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Done: &done}, &kkProto.Success{}); err != nil {
 			return err
 		}
 
@@ -952,7 +952,8 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	}
 	// handle button requests and forward the results
 	if kind == uint16(kkProto.MessageType_MessageType_ButtonRequest) {
-		fmt.Println("Awaiting user button press")
+		cyan := color.New(color.FgCyan).Add(color.Bold).SprintFunc()
+		fmt.Println(cyan("Awaiting user button press"))
 		if kk.debug != nil {
 			t := true
 			fmt.Println("sending debug press")
