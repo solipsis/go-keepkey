@@ -35,35 +35,6 @@ func newKeepkey() *Keepkey {
 	}
 }
 
-/*
-// LoadDevice wipes the keepkey and initializes with the provided seedwords and pin code
-// Pin will be disabled on the device if len(pin) == 0
-func (kk *Keepkey) LoadDevice(words []string, pin string) error {
-
-	// Wipe the device
-	wipe := new(kkProto.WipeDevice)
-	if _, err := kk.keepkeyExchange(wipe, &kkProto.Success{}); err != nil {
-		return err
-	}
-
-	mnemonic := strings.Join(words, " ")
-	load := &kkProto.LoadDevice{
-		Mnemonic: &mnemonic,
-	}
-	if len(pin) > 0 {
-		load.Pin = &pin
-	}
-
-	// Initialize the device with seed words and pin
-	success := new(kkProto.Success)
-	if _, err := kk.keepkeyExchange(load, success); err != nil {
-		return err
-	}
-
-	return nil
-}
-*/
-
 // TODO: do HID devices need to be closed?
 func (kk *Keepkey) Close() {
 	if kk.device == nil {
@@ -117,26 +88,6 @@ func GetDevice() (*Keepkey, error) {
 	}
 	return kk, nil
 }
-
-/*
-// GetPublicKey requests public key from the device according to a bip44 node path
-func (kk *Keepkey) GetPublicKey(path []uint32) (*kkProto.HDNodeType, string, error) {
-
-	// TODO: Add all curves device supports
-	curve := "secp256k1"
-	request := &kkProto.GetPublicKey{
-		AddressN:       path,
-		EcdsaCurveName: &curve,
-	}
-	pubkey := new(kkProto.PublicKey) // response from device
-	if _, err := kk.keepkeyExchange(request, pubkey); err != nil {
-		return nil, "", err
-	}
-
-	// TODO: return node instead???
-	return pubkey.Node, *pubkey.Xpub, nil
-}
-*/
 
 // ApplyPolicy enables or disables a named policy on the device
 func (kk *Keepkey) ApplyPolicy(name string, enabled bool) error {
@@ -198,25 +149,25 @@ func (kk *Keepkey) ApplySettings(label, language string, enablePassphrase bool) 
 	return err
 }
 
-/*
-TODO: need to deal with MultisigRedeemScriptType
-// Request: Ask device for address corresponding to address_n path
-// @next PassphraseRequest
-// @next Address
-// @next Failure
-type GetAddress struct {
-	AddressN         []uint32                          `protobuf:"varint,1,rep,name=address_n,json=addressN" json:"address_n,omitempty"`
-	CoinName         *string                           `protobuf:"bytes,2,opt,name=coin_name,json=coinName,def=Bitcoin" json:"coin_name,omitempty"`
-	ShowDisplay      *bool                             `protobuf:"varint,3,opt,name=show_display,json=showDisplay" json:"show_display,omitempty"`
-	Multisig         *kkProto.MultisigRedeemScriptType `protobuf:"bytes,4,opt,name=multisig" json:"multisig,omitempty"`
-	ScriptType       *kkProto.InputScriptType          `protobuf:"varint,5,opt,name=script_type,json=scriptType,enum=InputScriptType,def=0" json:"script_type,omitempty"`
-	XXX_unrecognized []byte                            `json:"-"`
-}
+// GetAddress returns an address string given a node path and a coin type.
+// Optionally you can display the address on the device screen
+// If passphrase is enabled this may request the passphrase.
+func (kk *Keepkey) GetAddress(path []uint32, coinName string, display bool) (string, error) {
 
-func (kk *Keepkey) GetAddress(path []uint32, coinName string, display bool) error {
-	kkProto.GetAddress()
+	//TODO: Add multisig support
+	getAddress := &kkProto.GetAddress{
+		AddressN:    path,
+		CoinName:    &coinName,
+		ShowDisplay: &display,
+	}
+
+	addr := new(kkProto.Address)
+	_, err := kk.keepkeyExchange(getAddress, addr)
+	if err != nil {
+		return "", err
+	}
+	return addr.GetAddress(), nil
 }
-*/
 
 // Request: Ask device to sign message
 // @next MessageSignature
@@ -415,6 +366,18 @@ func promptPin() (string, error) {
 	prompt := promptui.Prompt{
 		Label:    "Pin",
 		Validate: validate,
+	}
+	res, err := prompt.Run()
+	if err != nil {
+		return "", err
+	}
+	return res, nil
+}
+
+func promptPassphrase() (string, error) {
+	prompt := promptui.Prompt{
+		Label: "Passphrase",
+		Mask:  '*',
 	}
 	res, err := prompt.Run()
 	if err != nil {
@@ -973,6 +936,15 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 			return 0, err
 		}
 		return kk.keepkeyExchange(&kkProto.PinMatrixAck{Pin: &pin}, results...)
+	}
+	// handle passphrase requests and forward the results
+	if kind == uint16(kkProto.MessageType_MessageType_PassphraseRequest) {
+		fmt.Println("Passphrase requested")
+		pass, err := promptPassphrase()
+		if err != nil {
+			return 0, err
+		}
+		return kk.keepkeyExchange(&kkProto.PassphraseAck{Passphrase: &pass}, results...)
 	}
 	for i, res := range results {
 		if kkProto.Type(res) == kind {

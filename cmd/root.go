@@ -23,6 +23,9 @@ var initVector string
 // BIP44 node path
 var nodePath string
 
+// Coin type i.e (Bitcoin, Ethereum)
+var coinType string
+
 func init() {
 	// TODO: init on each subcommand instead
 	cobra.OnInitialize(connectDevice)
