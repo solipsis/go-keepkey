@@ -20,6 +20,9 @@ var label, pin string
 // initialization vector for encryptKeyValue and decryptKeyValue
 var initVector string
 
+// BIP44 node path
+var nodePath string
+
 func init() {
 	// TODO: init on each subcommand instead
 	cobra.OnInitialize(connectDevice)
