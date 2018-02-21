@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
@@ -29,6 +30,6 @@ var getEntropyCmd = &cobra.Command{
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		fmt.Println(buf)
+		fmt.Println(hex.EncodeToString(buf))
 	},
 }

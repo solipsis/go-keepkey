@@ -570,11 +570,13 @@ func (kk *Keepkey) Cancel() error {
 // CipherKeyValue encrypts or decrypts a value with a given key, nodepath, and initializationVector
 // This method encrypts if encrypt is true and decrypts if false, the confirm paramater determines wether
 // the user is prompted on the device. See EncryptKeyValue() and DecryptKeyValue() for convenience methods
+// NOTE: If the length of the value in bytes is not divisible by 16 it will be zero padded
 func (kk *Keepkey) CipherKeyValue(path []uint32, key string, val, IV []byte, encrypt, confirm bool) ([]byte, error) {
 
 	// TODO: do I want to pad to 16 bytes or error?
 	if len(val)%16 != 0 {
-		return []byte{}, errors.New("Length of value to encrypt/decrypt must be multiple of 16 bytes")
+		val = append(val, make([]byte, 16-len(val))...)
+		//return []byte{}, errors.New("Length of value to encrypt/decrypt must be multiple of 16 bytes")
 	}
 
 	cipher := &kkProto.CipherKeyValue{
@@ -584,6 +586,7 @@ func (kk *Keepkey) CipherKeyValue(path []uint32, key string, val, IV []byte, enc
 		Encrypt:      &encrypt,
 		AskOnEncrypt: &confirm,
 		AskOnDecrypt: &confirm,
+		Iv:           IV,
 	}
 	data := make([]byte, 0)
 	res := new(kkProto.CipheredKeyValue)

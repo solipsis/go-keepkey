@@ -17,7 +17,11 @@ var buttonProtection, pinProtection, passphraseProtection bool
 // setting label and pin
 var label, pin string
 
+// initialization vector for encryptKeyValue and decryptKeyValue
+var initVector string
+
 func init() {
+	// TODO: init on each subcommand instead
 	cobra.OnInitialize(connectDevice)
 }
 
@@ -33,10 +37,6 @@ var rootCmd = &cobra.Command{
 	Use:   "go-keepkey",
 	Short: "go-keepkey blah short description",
 	Long:  "long",
-	Run: func(cmd *cobra.Command, args []string) {
-
-		fmt.Println("how does this work")
-	},
 }
 
 func Execute() {
