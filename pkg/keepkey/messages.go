@@ -10,8 +10,6 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
-	"os"
-	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -343,47 +341,6 @@ func (kk *Keepkey) Ping(msg string, button, pin, password bool) (string, error) 
 		return "", err
 	}
 	return success.GetMessage(), nil
-}
-
-// Prompt the user for their pin
-func promptPin() (string, error) {
-	cyan := color.New(color.FgCyan).FprintFunc()
-	magenta := color.New(color.FgMagenta).FprintFunc()
-	magenta(os.Stdout, "Enter your pin using the corresponding positions shown on your device\n")
-	cyan(os.Stdout, "7 | 8 | 9\n")
-	cyan(os.Stdout, "4 | 5 | 6\n")
-	cyan(os.Stdout, "1 | 2 | 3\n\n")
-
-	// validation function for prompt testing if input is a valid number
-	validate := func(in string) error {
-		if _, err := strconv.Atoi(in); err != nil {
-			return errors.New("Pin must be a number")
-		}
-		return nil
-	}
-
-	// Prompt the user for their pin
-	prompt := promptui.Prompt{
-		Label:    "Pin",
-		Validate: validate,
-	}
-	res, err := prompt.Run()
-	if err != nil {
-		return "", err
-	}
-	return res, nil
-}
-
-func promptPassphrase() (string, error) {
-	prompt := promptui.Prompt{
-		Label: "Passphrase",
-		Mask:  '*',
-	}
-	res, err := prompt.Run()
-	if err != nil {
-		return "", err
-	}
-	return res, nil
 }
 
 // ChangePin requests setting/changing the pin
@@ -918,12 +875,10 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	}
 	// handle button requests and forward the results
 	if kind == uint16(kkProto.MessageType_MessageType_ButtonRequest) {
-		cyan := color.New(color.FgCyan).Add(color.Bold).SprintFunc()
-		fmt.Println(cyan("Awaiting user button press"))
+		promptButton()
 		if kk.debug != nil {
 			t := true
 			fmt.Println("sending debug press")
-			//kk.keepkeyDebug(&kkProto.DebugLinkDecision{YesNo: &t}, results...)
 			kk.keepkeyExchange(&kkProto.DebugLinkDecision{YesNo: &t}, &kkProto.Success{})
 		}
 		return kk.keepkeyExchange(&kkProto.ButtonAck{}, results...)
