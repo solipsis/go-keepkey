@@ -45,7 +45,7 @@ Flags:
 import "github.com/solipsis/go-keepkey/keepkey"
 ```
 
-Connect to all connected Keepkey devices. For example:
+### Connect to all connected Keepkey devices ###
 
 ```go
 devices, err := keepkey.GetDevices()
@@ -55,7 +55,7 @@ kk := devices[0]
 features, err := kk.GetFeatures()
 ```
 
-Wipe the device and load with new seed words and settings
+### Wipe the device and load with new seed words and settings ###
 
 ```go
 kk.WipeDevice() // Error ignored
@@ -68,4 +68,25 @@ usePassphrase := false
 useChecksum := false 
 
 kk.LoadDevice(strings.Split(words, " "), pin, label, usePassphrase, useChecksum)
+```
+### Upload custom firmware ###
+```go
+path := "path/to/firmware.bin"
+numBtyes, err := kk.UploadFirmware(path)
+```
+
+### Get an ethereum address for a BIP44 node ###
+```go
+nodePath := []uint32{0x8000002C, 0x8000003C, 0x80000000, 0x0, 0x01} // m/44'/60'/0'/0/1
+display := true // display the address and QR code on the device screen
+
+kk.EthereumGetAddress(nodePath, display)
+```
+
+### Get entropy sample from the device RNG ###
+```go
+var entropy []byte
+size := 1024 // number of bytes of entropy to request up to 1024 bytes
+entropy, err := kk.GetEntropy(size)
+```
 
