@@ -48,8 +48,10 @@ func Execute() {
 
 func connectDevice() {
 	var err error
-	kk, err = keepkey.GetDevice()
+	kks, err := keepkey.GetDevice()
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Connect to the first found keepkey
+	kk = kks[0]
 }

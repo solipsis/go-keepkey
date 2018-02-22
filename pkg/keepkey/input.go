@@ -52,6 +52,43 @@ func promptPin() (string, error) {
 	return res, nil
 }
 
+// Prompt the user for the next character during the seed recovery process
+func promptCharacter(word, char uint32) (string, error) {
+
+	// Input validation function
+	validate := func(input string) error {
+		if input != "undo" && input != "next" && (len(input) > 1 || len(input) < 1) {
+			return errors.New("Input must be a single letter (a-z) or \"undo\" or \"next\" ")
+		}
+		return nil
+	}
+
+	// Pretty colors for prompt
+	green := color.New(color.FgGreen).Add(color.Underline).Add(color.Bold).SprintFunc()
+	magenta := color.New(color.FgMagenta).Add(color.Underline).Add(color.Bold).SprintFunc()
+	blue := color.New(color.FgCyan).SprintFunc()
+
+	text := "Enter | " + green(fmt.Sprintf("word #%d", word+1)) + " | " + magenta(fmt.Sprintf("letter #%d", char+1)) + " |,"
+	text += blue(" or type \"next\" to continue or \"undo\" to go back")
+	prompt := promptui.Prompt{
+		Label:    text,
+		Validate: validate,
+	}
+
+	// Get input from user
+	result, err := prompt.Run()
+	if err != nil {
+		return "", err
+	}
+
+	// Device uses <space> as signal to proceed to next word
+	if result == "next" {
+		result = " "
+	}
+
+	return result, nil
+}
+
 // Let the user know a button press is required to continue
 func promptButton() {
 	cyan := color.New(color.FgCyan).Add(color.Bold).SprintFunc()

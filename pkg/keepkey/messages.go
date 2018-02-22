@@ -12,82 +12,11 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/fatih/color"
-	"github.com/golang/protobuf/proto"
 	"github.com/karalabe/hid"
-	"github.com/manifoldco/promptui"
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
 )
 
-type Keepkey struct {
-	info          hid.DeviceInfo
-	device, debug *hid.Device
-	vendorID      uint16
-	productID     uint16
-}
-
-func newKeepkey() *Keepkey {
-	return &Keepkey{
-		vendorID:  0x2B24,
-		productID: 0x0001,
-	}
-}
-
-// TODO: do HID devices need to be closed?
-func (kk *Keepkey) Close() {
-	if kk.device == nil {
-		return
-	}
-	kk.device.Close()
-	kk.device = nil
-}
-
-func GetDevice() (*Keepkey, error) {
-
-	kk := newKeepkey()
-
-	// TODO: add support for multiple keepkeys
-	var deviceInfo, debugInfo hid.DeviceInfo
-	for _, info := range hid.Enumerate(kk.vendorID, 0) {
-		//fmt.Println("info:", info)
-		if info.ProductID == kk.productID {
-			// seperate connection to debug interface if debug link is enabled
-			if strings.HasSuffix(info.Path, "1") {
-				//fmt.Println("Debug: ", info)
-				debugInfo = info
-			} else {
-				//fmt.Println("Device: ", info)
-				deviceInfo = info
-			}
-		}
-	}
-	if deviceInfo.Path == "" {
-		return nil, errors.New("No keepkey detected")
-	}
-
-	// Open connection to device
-	device, err := deviceInfo.Open()
-	if err != nil {
-		return nil, err
-	}
-	// debug
-	if debugInfo.Path != "" {
-		debug, err := debugInfo.Open()
-		if err != nil {
-			fmt.Println("unable to initiate debug link")
-		}
-		fmt.Println("Debug link established")
-		kk.debug = debug
-	}
-
-	// Ping the device and ask for its features
-	if _, err = kk.Initialize(device); err != nil {
-		return nil, err
-	}
-	return kk, nil
-}
-
-// ApplyPolicy enables or disables a named policy on the device
+// ApplyPolicy enables or disables a named policy such as "ShapeShift" on the device
 func (kk *Keepkey) ApplyPolicy(name string, enabled bool) error {
 
 	pol := &kkProto.PolicyType{
@@ -168,24 +97,7 @@ func (kk *Keepkey) GetAddress(path []uint32, coinName string, display bool) (str
 	return addr.GetAddress(), nil
 }
 
-// Request: Ask device to sign message
-// @next MessageSignature
-// @next Failure
-type SignMessage struct {
-	AddressN         []uint32 `protobuf:"varint,1,rep,name=address_n,json=addressN" json:"address_n,omitempty"`
-	Message          []byte   `protobuf:"bytes,2,req,name=message" json:"message,omitempty"`
-	CoinName         *string  `protobuf:"bytes,3,opt,name=coin_name,json=coinName,def=Bitcoin" json:"coin_name,omitempty"`
-	XXX_unrecognized []byte   `json:"-"`
-}
-
-// Response: Signed message
-// @prev SignMessage
-type MessageSignature struct {
-	Address          *string `protobuf:"bytes,1,opt,name=address" json:"address,omitempty"`
-	Signature        []byte  `protobuf:"bytes,2,opt,name=signature" json:"signature,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
-}
-
+// SignMessage signs a message using the given nodepath and Coin
 func (kk *Keepkey) SignMessage(path []uint32, msg []byte, coinName string) (string, []byte, error) {
 
 	sign := &kkProto.SignMessage{
@@ -215,44 +127,7 @@ func (kk *Keepkey) VerifyMessage(addr, coinName string, msg, sig []byte) error {
 	return err
 }
 
-// Prompt the user for the next character during the seed recovery process
-func promptCharacter(word, char uint32) (string, error) {
-
-	// Input validation function
-	validate := func(input string) error {
-		if input != "undo" && input != "next" && (len(input) > 1 || len(input) < 1) {
-			return errors.New("Input must be a single letter (a-z) or \"undo\" or \"next\" ")
-		}
-		return nil
-	}
-
-	// Pretty colors for prompt
-	green := color.New(color.FgGreen).Add(color.Underline).Add(color.Bold).SprintFunc()
-	magenta := color.New(color.FgMagenta).Add(color.Underline).Add(color.Bold).SprintFunc()
-	blue := color.New(color.FgCyan).SprintFunc()
-
-	text := "Enter | " + green(fmt.Sprintf("word #%d", word+1)) + " | " + magenta(fmt.Sprintf("letter #%d", char+1)) + " |,"
-	text += blue(" or type \"next\" to continue or \"undo\" to go back")
-	prompt := promptui.Prompt{
-		Label:    text,
-		Validate: validate,
-	}
-
-	// Get input from user
-	result, err := prompt.Run()
-	if err != nil {
-		return "", err
-	}
-
-	// Device uses <space> as signal to proceed to next word
-	if result == "next" {
-		result = " "
-	}
-
-	return result, nil
-}
-
-// Recover device initiates the interactive seed recovery process in which the user is asked to input their seed words
+// RecoverDevice initiates the interactive seed recovery process in which the user is asked to input their seed words
 // The useCharacterCipher flag tells the device to recover using the on-screen cypher or through entering
 // the words in a random order. This method must be called on an uninitialized device
 func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordlist, useCharacterCipher bool) error {
@@ -719,7 +594,7 @@ func (kk *Keepkey) ethereumSignTx(est *kkProto.EthereumSignTx) (*kkProto.Ethereu
 	// TODO:
 }
 
-// *
+/*
 // Response: Device asks for information for signing transaction or returns the last result
 // If request_index is set, device awaits TxAck message (with fields filled in according to request_type)
 // If signature_index is set, 'signature' contains signed input of signature_index's input
@@ -746,6 +621,7 @@ const (
 	RequestType_TXEXTRADATA RequestType = 4
 )
 
+/*
 // *
 // Structure representing request details
 // @used_in TxRequest
@@ -776,142 +652,4 @@ func (kk *Keepkey) SignTx(outCount, inCount, version, locktime uint32, name stri
 	// if details.request_idex. Send an ack with fields base on request type
 	// if serilazed.signatur_index signature contains signed input of signatur_index's input
 }
-
-func isDebugMessage(req interface{}) bool {
-	switch req.(type) {
-	case *kkProto.DebugLinkDecision, *kkProto.DebugLinkFillConfig, *kkProto.DebugLinkGetState:
-		return true
-	}
-	return false
-}
-
-// keepkeyExchange sends a request to the device and streams back the results
-// if multiple results are possible the index of the result message is also returned
-// based on trezorExchange()
-// in https://github.com/go-ethereum/accounts/usbwallet/trezor.go
-func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) (int, error) {
-
-	device := kk.device
-	debug := false
-	if isDebugMessage(req) && kk.debug != nil {
-		device = kk.debug
-		debug = true
-	}
-
-	// Construct message payload to chunk up
-	data, err := proto.Marshal(req)
-	if err != nil {
-		return 0, err
-	}
-	payload := make([]byte, 8+len(data))
-	copy(payload, []byte{0x23, 0x23}) // ## header
-	binary.BigEndian.PutUint16(payload[2:], kkProto.Type(req))
-	binary.BigEndian.PutUint32(payload[4:], uint32(len(data)))
-	copy(payload[8:], data)
-
-	// stream all the chunks to the device
-	chunk := make([]byte, 64)
-	chunk[0] = 0x3f // HID Magic number???
-
-	for len(payload) > 0 {
-		// create the message to stream and pad with zeroes if necessary
-		if len(payload) > 63 {
-			copy(chunk[1:], payload[:63])
-			payload = payload[63:]
-		} else {
-			copy(chunk[1:], payload)
-			copy(chunk[1+len(payload):], make([]byte, 63-len(payload)))
-			payload = nil
-		}
-		// send over to the device
-		if _, err := device.Write(chunk); err != nil {
-			return 0, err
-		}
-	}
-
-	// TODO; support debug requests that return data
-	// don't wait for response if sending debug buttonPress
-	if debug {
-		return 0, nil
-	}
-
-	// stream the reply back in 64 byte chunks
-	var (
-		kind  uint16
-		reply []byte
-	)
-	for {
-		// Read next chunk
-		if _, err := io.ReadFull(device, chunk); err != nil {
-			return 0, err
-		}
-
-		//TODO: check transport header
-
-		//if it is the first chunk, retreive the reply message type and total message length
-		var payload []byte
-
-		if len(reply) == 0 {
-			kind = binary.BigEndian.Uint16(chunk[3:5])
-			reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
-			payload = chunk[9:]
-		} else {
-			payload = chunk[1:]
-		}
-		// Append to the reply and stop when filled up
-		if left := cap(reply) - len(reply); left > len(payload) {
-			reply = append(reply, payload...)
-		} else {
-			reply = append(reply, payload[:left]...)
-			break
-		}
-	}
-
-	// Try to parse the reply into the requested reply message
-	if kind == uint16(kkProto.MessageType_MessageType_Failure) {
-		// keepkey returned a failure, extract and return the message
-		failure := new(kkProto.Failure)
-		if err := proto.Unmarshal(reply, failure); err != nil {
-			return 0, err
-		}
-		return 0, errors.New("keepkey: " + failure.GetMessage())
-	}
-	// handle button requests and forward the results
-	if kind == uint16(kkProto.MessageType_MessageType_ButtonRequest) {
-		promptButton()
-		if kk.debug != nil {
-			t := true
-			fmt.Println("sending debug press")
-			kk.keepkeyExchange(&kkProto.DebugLinkDecision{YesNo: &t}, &kkProto.Success{})
-		}
-		return kk.keepkeyExchange(&kkProto.ButtonAck{}, results...)
-	}
-	// handle pin matrix requests and forward the results
-	if kind == uint16(kkProto.MessageType_MessageType_PinMatrixRequest) {
-		fmt.Println("Pin requested")
-		pin, err := promptPin()
-		if err != nil {
-			return 0, err
-		}
-		return kk.keepkeyExchange(&kkProto.PinMatrixAck{Pin: &pin}, results...)
-	}
-	// handle passphrase requests and forward the results
-	if kind == uint16(kkProto.MessageType_MessageType_PassphraseRequest) {
-		fmt.Println("Passphrase requested")
-		pass, err := promptPassphrase()
-		if err != nil {
-			return 0, err
-		}
-		return kk.keepkeyExchange(&kkProto.PassphraseAck{Passphrase: &pass}, results...)
-	}
-	for i, res := range results {
-		if kkProto.Type(res) == kind {
-			return i, proto.Unmarshal(reply, res)
-		}
-	}
-	expected := make([]string, len(results))
-	for i, res := range results {
-		expected[i] = kkProto.Name(kkProto.Type(res))
-	}
-	return 0, fmt.Errorf("keepkey: expected reply types %s, got %s", expected, kkProto.Name(kind))
-}
+*/
