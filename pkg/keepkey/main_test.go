@@ -4,17 +4,19 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"testing"
 )
 
 var kk *Keepkey
 
 func TestMain(m *testing.M) {
-	k, err := GetDevice()
+	// Connect to the first connected keepkey then run tests
+	kks, err := GetDevices()
 	if err != nil {
 		log.Fatal("No keepkey detected")
 	}
-	kk = k
+	kk = kks[0]
 	os.Exit(m.Run())
 }
 
@@ -55,23 +57,13 @@ func TestEncryptDecrypt(t *testing.T) {
 func TestPing(t *testing.T) {
 	t.Log("Testing Ping")
 	s, err := kk.Ping("Hello", false, false, false)
-	if err != nil || s.GetMessage() != "Hello" {
+	if err != nil || s != "Hello" {
 		t.Fail()
 	}
 	s, err = kk.Ping("Button", true, false, false)
-	if err != nil || s.GetMessage() != "Button" {
+	if err != nil || s != "Button" {
 		t.Fail()
 	}
-}
-
-func TestCancelButton(t *testing.T) {
-	//go kk.Ping("Cancel me", true, false, false)
-	//if err != nil {
-	//t.Fail()
-	//}
-	//for i := 0; i < 10000; i++ {
-	//kk.Cancel()
-	//}
 }
 
 func TestGetPublicKey(t *testing.T) {
@@ -87,11 +79,10 @@ func TestGetPublicKey(t *testing.T) {
 }
 
 func TestLoadDevice(t *testing.T) {
-	/*
-		words := "water explain wink proof size gift sort silly collect differ anger yard"
-		if err := kk.LoadDevice(strings.Split(words, " "), "", "", false, true); err != nil {
-			t.Log(err)
-			t.Fail()
-		}
-	*/
+	kk.WipeDevice()
+	words := "water explain wink proof size gift sort silly collect differ anger yard"
+	if err := kk.LoadDevice(strings.Split(words, " "), "", "", false, true); err != nil {
+		t.Log(err)
+		t.Fail()
+	}
 }

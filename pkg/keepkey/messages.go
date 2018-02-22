@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -138,66 +137,44 @@ func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordlist, useCharacterC
 		UseCharacterCipher: &useCharacterCipher,
 	}
 
-	if useCharacterCipher {
-
-		// start the recovery process
-		req := new(kkProto.CharacterRequest)
-		if _, err := kk.keepkeyExchange(recover, req); err != nil {
-			return err
-		}
-
-		// Prompt words until we have entered the desired number. Must be 12, 18, or 24
-		var wordNum uint32
-		for wordNum < numWords {
-			s, err := promptCharacter(req.GetWordPos(), req.GetCharacterPos())
-			if err != nil {
-				return err
-			}
-
-			// Undo the previous character if the user typed back
-			if s == "undo" {
-				del := true
-				if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Delete: &del}, req); err != nil {
-					return err
-				}
-				continue
-			}
-
-			// Send the character to the device
-			req = new(kkProto.CharacterRequest)
-			if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Character: &s}, req); err != nil {
-				return err
-			}
-
-			wordNum = req.GetWordPos()
-		}
-
-		// Tell the device we are done
-		done := true
-		if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Done: &done}, &kkProto.Success{}); err != nil {
-			return err
-		}
-
-	} else {
-
-		return errors.New("not implemented")
-		/*
-			if _, err := kk.keepkeyExchange(recover, &kkProto.WordRequest{}); err != nil {
-				return err
-			}
-
-			for i := uint32(0); i < numWords; i++ {
-				time.Sleep(5 * time.Second)
-				w := "alcohol"
-				word := &kkProto.WordAck{Word: &w}
-				if _, err := kk.keepkeyExchange(word, &kkProto.WordRequest{}); err != nil {
-					return err
-				}
-			}
-			fmt.Println("Device recovered")
-			return nil
-		*/
+	// start the recovery process
+	req := new(kkProto.CharacterRequest)
+	if _, err := kk.keepkeyExchange(recover, req); err != nil {
+		return err
 	}
+
+	// Prompt words until we have entered the desired number. Must be 12, 18, or 24
+	var wordNum uint32
+	for wordNum < numWords {
+		s, err := promptCharacter(req.GetWordPos(), req.GetCharacterPos())
+		if err != nil {
+			return err
+		}
+
+		// Undo the previous character if the user typed back
+		if s == "undo" {
+			del := true
+			if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Delete: &del}, req); err != nil {
+				return err
+			}
+			continue
+		}
+
+		// Send the character to the device
+		req = new(kkProto.CharacterRequest)
+		if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Character: &s}, req); err != nil {
+			return err
+		}
+
+		wordNum = req.GetWordPos()
+	}
+
+	// Tell the device we are done
+	done := true
+	if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Done: &done}, &kkProto.Success{}); err != nil {
+		return err
+	}
+
 	return nil
 
 }
@@ -493,69 +470,16 @@ func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, tx *EthereumTx) (*kkP
 
 func (kk *Keepkey) ethereumSignTx(est *kkProto.EthereumSignTx) (*kkProto.EthereumTxRequest, error) {
 	data := make([]byte, 0)
-	//test := []byte("6b67c94fc31510707F9c0f1281AaD5ec9a2EEFF0")
-	//tokenTo := make([]byte, 20)
-	//hex.Decode(tokenTo, test)
-	//tokenValue := make([]byte, 32)
-	//tokenBig := big.NewInt(1337)
-	//copy(tokenValue[32-len(tokenBig.Bytes()):], tokenBig.Bytes())
-	/*
-		empty := make([]byte, 0)
-		fmt.Println(empty)
-		addressType := kkProto.OutputAddressType_EXCHANGE
-		resp := ExchangeType{}
-		json.Unmarshal([]byte(sampleExchangeResp), &resp)
-		exchangeType := exchangeProtoFromJSON(resp)
-		fmt.Println(exchangeType)
-		est := &kkProto.EthereumSignTx{
-			AddressN:     derivationPath,
-			AddressType:  &addressType,
-			Nonce:        big.NewInt(int64(nonce)).Bytes(),
-			GasPrice:     big.NewInt(22000000000).Bytes(),
-			GasLimit:     big.NewInt(70000).Bytes(),
-			ExchangeType: exchangeType,
-			//GasLimit: big.NewInt(1000).Bytes(),
-			//Value: empty,
-			//Value: big.NewInt(1).Bytes(),
-
-			//		DataLength:    &length,
-			//To:         empty,
-			//ToAddressN: toTest,
-			TokenValue: tokenValue,
-			//TokenValue:    big.NewInt(6).Bytes(),
-			TokenShortcut: &tokenShortcut,
-			TokenTo:       tokenTo,
-			//ChainId: &chainId,
-
-			//To:         []byte("32Be343B94f860124dC4fEe278FDCBD38C102D88"),
-		}
-	*/
-	//fmt.Println(est.GasLimit)
-	/*
-		if length > 1024 {
-			est.DataInitialChunk, data = data[:1024], data[1024:]
-		} else {
-			est.DataInitialChunk, data = data, nil
-		}
-	*/
-	fmt.Println("******************************************")
-	fmt.Println(est)
-	//fmt.Println(hex.EncodeToString(est.GasLimit))
-	//fmt.Println(hex.EncodeToString(est.Value))
-	//fmt.Println(hex.EncodeToString(est.GasPrice))
 	response := new(kkProto.EthereumTxRequest)
-	fmt.Println("**************************************")
+
 	if _, err := kk.keepkeyExchange(est, response); err != nil {
-		fmt.Println("error sending initial sign request")
 		return nil, err
 	}
 
 	// stream until a signature is returned
 	for response.DataLength != nil && int(*response.DataLength) <= len(data) {
 		chunk := data[:*response.DataLength]
-		fmt.Println("chunk", chunk)
 		data = data[*response.DataLength:]
-		fmt.Println("data", data)
 		// acknowledge that we got a chunk and ask for the next one
 		if _, err := kk.keepkeyExchange(&kkProto.EthereumTxAck{DataChunk: chunk}, response); err != nil {
 			fmt.Println("error streaming response")
@@ -572,8 +496,7 @@ func (kk *Keepkey) ethereumSignTx(est *kkProto.EthereumSignTx) (*kkProto.Ethereu
 	fmt.Println("hash:", hex.EncodeToString(response.Hash))
 	fmt.Println(response)
 	return response, nil
-	//fmt.Println(response)
-
+	// TODO: use signer as soon as eip 155 support is added
 	/*
 		// Create the correct signer and signature transform based on the chain ID
 		var signer types.Signer
@@ -591,7 +514,6 @@ func (kk *Keepkey) ethereumSignTx(est *kkProto.EthereumSignTx) (*kkProto.Ethereu
 		fmt.Println(sender)
 	*/
 
-	// TODO:
 }
 
 /*
