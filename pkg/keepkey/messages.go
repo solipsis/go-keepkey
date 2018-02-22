@@ -134,14 +134,15 @@ func (kk *Keepkey) ClearSession() error {
 // The default language is english
 func (kk *Keepkey) ApplySettings(label, language string, enablePassphrase bool) error {
 
-	if language == "" {
-		language = "english"
+	settings := &kkProto.ApplySettings{
+		UsePassphrase: &enablePassphrase,
 	}
 
-	settings := &kkProto.ApplySettings{
-		Label:         &label,
-		Language:      &language,
-		UsePassphrase: &enablePassphrase,
+	if language != "" {
+		settings.Language = &language
+	}
+	if label != "" {
+		settings.Label = &label
 	}
 	_, err := kk.keepkeyExchange(settings, &kkProto.Success{})
 	return err
@@ -579,6 +580,8 @@ func (kk *Keepkey) EthereumGetAddress(path []uint32, display bool) ([]byte, erro
 	return buf, nil
 }
 
+// Sign an ethereum transaction using a given node path
+// The user may be prompted for a pin and/or passphrase if they are enabled
 func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, tx *EthereumTx) (*kkProto.EthereumTxRequest, error) {
 
 	// Convert Address to hex
