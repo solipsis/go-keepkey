@@ -3,8 +3,30 @@ package keepkey
 import "math/big"
 import "github.com/solipsis/go-keepkey/pkg/kkProto"
 
-// should take interface
-func EthTxAsProto(tx *EthereumTx, nodePath []uint32) *kkProto.EthereumSignTx {
+type EthereumTx struct {
+	Nonce     uint64
+	Payload   []byte
+	Data      []byte
+	Amount    *big.Int
+	GasPrice  *big.Int
+	GasLimit  *big.Int
+	Recipient string
+
+	// Signature values
+	V []byte
+	R []byte
+	S []byte
+}
+
+type TokenTx struct {
+	*EthereumTx
+	TokenTo       string
+	TokenValue    *big.Int
+	TokenShortcut string
+}
+
+// convert EthTx to protobuf to send to device
+func ethTxAsProto(tx *EthereumTx, nodePath []uint32) *kkProto.EthereumSignTx {
 
 	est := &kkProto.EthereumSignTx{
 		AddressN: nodePath,
@@ -12,7 +34,6 @@ func EthTxAsProto(tx *EthereumTx, nodePath []uint32) *kkProto.EthereumSignTx {
 
 	data := make([]byte, len(tx.Payload))
 	copy(data, tx.Payload)
-	//length := len(data)
 
 	// For proper rlp encoding when the value of the  parameter is zero,
 	// the device expects an empty byte array instead of
@@ -38,6 +59,7 @@ func emptyOrVal(val *big.Int) []byte {
 	return val.Bytes()
 }
 
+// NewTransaction creates a new Ethereum Transaction
 func NewTransaction(nonce uint64, recipient string, amount, gasLimit, gasPrice *big.Int, data []byte) *EthereumTx {
 	if len(data) > 0 {
 		cp := make([]byte, len(data))
@@ -51,9 +73,6 @@ func NewTransaction(nonce uint64, recipient string, amount, gasLimit, gasPrice *
 		GasLimit:  new(big.Int),
 		GasPrice:  new(big.Int),
 		Data:      data,
-		//V:         new(big.Int),
-		//R:         new(big.Int),
-		//S:         new(big.Int),
 	}
 	if amount != nil {
 		tx.Amount.Set(amount)
@@ -68,6 +87,7 @@ func NewTransaction(nonce uint64, recipient string, amount, gasLimit, gasPrice *
 	return &tx
 }
 
+// NewTokenTransaction creates a new token transaction
 func NewTokenTransaction(tx *EthereumTx, tShortcut, tRecipient string, tValue *big.Int) *TokenTx {
 	tokenTx := &TokenTx{
 		EthereumTx:    tx,

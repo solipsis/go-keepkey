@@ -34,36 +34,36 @@ func GetDevices() ([]*Keepkey, error) {
 
 	kk := newKeepkey()
 
-	type pair struct {
+	// tie a keepkey to its debug interface
+	type infoPair struct {
 		device, debug hid.DeviceInfo
 	}
-	deviceMap := make(map[string]*pair)
 
-	// TODO: add support for multiple keepkeys
+	// Iterate over all connected keepkeys pairing each one with its
+	// corresponding debug link if enabled
+	deviceMap := make(map[string]*infoPair)
 	for _, info := range hid.Enumerate(kk.vendorID, 0) {
-		//fmt.Println("info:", info)
 		if info.ProductID == kk.productID {
 
 			// get all but the last character of the hid path
+			// if the path ends with 0 it is a device if it ends with 1
+			// the device is advertising a debug connection
 			pathKey := info.Path[:len(info.Path)-1]
 			if deviceMap[pathKey] == nil {
-				deviceMap[pathKey] = new(pair)
+				deviceMap[pathKey] = new(infoPair)
 			}
 
 			// seperate connection to debug interface if debug link is enabled
 			if strings.HasSuffix(info.Path, "1") {
-				//fmt.Println("Debug: ", info)
 				deviceMap[pathKey].debug = info
-				//debugInfo = info
 			} else {
 				fmt.Println("Device: ", info)
 				deviceMap[pathKey].device = info
-				//deviceInfo = info
 			}
-			fmt.Println("path: ", info.Path)
 		}
 	}
 
+	// Open HID connections to all devices found in the previous step
 	var deviceInfo, debugInfo hid.DeviceInfo
 	devices := make([]*Keepkey, 0)
 	for _, pair := range deviceMap {

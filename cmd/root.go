@@ -29,8 +29,8 @@ var coinType string
 // Root cobra CLI command
 var rootCmd = &cobra.Command{
 	Use:   "go-keepkey",
-	Short: "go-keepkey blah short description",
-	Long:  "long",
+	Short: "go-keepkey is a CLI for interacting with keepkey devices",
+	Long:  "lgo-keepkey is a CLI for interacting with keepkey devices",
 }
 
 func init() {
@@ -48,7 +48,7 @@ func Execute() {
 
 func connectDevice() {
 	var err error
-	kks, err := keepkey.GetDevice()
+	kks, err := keepkey.GetDevices()
 	if err != nil {
 		log.Fatal(err)
 	}

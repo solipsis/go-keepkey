@@ -18,11 +18,26 @@ func main() {
 		wg.Add(1)
 		go func(kk *keepkey.Keepkey) {
 			defer wg.Done()
-			str, err := kk.Ping("multi", true, false, false)
+			_, err := kk.Ping("Ripple", true, false, false)
 			if err != nil {
 				fmt.Println(err)
+				return
 			}
-			fmt.Println("str", str)
+			_, err = kk.EthereumGetAddress([]uint32{0x0}, true)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			_, err = kk.Ping("is", true, false, false)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			_, err = kk.Ping("> Ellie", true, false, false)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 		}(kk)
 	}
 	wg.Wait()
