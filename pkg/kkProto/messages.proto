@@ -1,7 +1,6 @@
 /*
  * Messages for KeepKey Communication
  *
- * @keepkey_version	2.0.0
  */
 
 // Sugar for easier handling in Java
@@ -72,6 +71,8 @@ enum MessageType {
  	MessageType_CharacterAck = 81 [(wire_in) = true];
  	MessageType_RawTxAck = 82 [(wire_in) = true];
  	MessageType_ApplyPolicies = 83 [(wire_in) = true];
+	MessageType_FlashHash = 84 [(wire_in) = true];
+	MessageType_FlashWrite = 85 [(wire_in) = true];
 	MessageType_DebugLinkDecision = 100 [(wire_debug_in) = true];
 	MessageType_DebugLinkGetState = 101 [(wire_debug_in) = true];
 	MessageType_DebugLinkState = 102 [(wire_debug_out) = true];
@@ -720,6 +721,45 @@ message SignedIdentity {
 message ApplyPolicies {
 	repeated PolicyType policy = 1;		// policy
 }
+
+/////////////////////////
+// Bootloader Verification
+/////////////////////////
+
+/**
+ * Request: Ask the device to return a hash of flash memory
+ * @next FlashHashResponse
+ * @next Failure
+ */
+message FlashHash {
+	optional uint32 sector_start = 1;
+	optional uint32 offset_start = 2;
+	optional uint32 sector_end = 3;
+	optional uint32 offset_end = 4;
+	optional bytes nonce = 5;
+}
+
+/**
+ * Request: Write a chunk of data into flash memory
+ * @next FlashHashResponse
+ * @next Failure
+ */
+message FlashWrite {
+	optional uint32 sector = 1;
+	optional uint32 offset = 2;
+	optional bytes data = 3;
+}
+
+/**
+ * Response: Returns hash of requested data sector
+ * @prev FlashHash
+ * @prev FlashWrite
+ */
+ message FlashHashResponse {
+ 	optional bytes data = 1;
+ }
+
+
 
 /////////////////////////
 // Bootloader messages //

@@ -413,6 +413,46 @@ func (kk *Keepkey) UploadFirmware(path string) (int, error) {
 	return len(data), nil
 }
 
+func (kk *Keepkey) WriteFlash(sector uint8, offset uint16, data []byte) ([]byte, error) {
+
+	s := uint32(sector)
+	o := uint32(offset)
+	write := &kkProto.FlashWrite{
+		Sector: &s,
+		Offset: &o,
+		Data:   data,
+	}
+
+	resp := new(kkProto.FlashHashResponse)
+	if _, err := kk.keepkeyExchange(write, resp); err != nil {
+		return []byte{}, err
+	}
+
+	return resp.GetData(), nil
+}
+
+func (kk *Keepkey) FlashHash(secStart, secEnd uint8, offStart, offEnd uint16, nonce []byte) ([]byte, error) {
+
+	ss := uint32(secStart)
+	se := uint32(secEnd)
+	os := uint32(offStart)
+	oe := uint32(offEnd)
+
+	flash := &kkProto.FlashHash{
+		SectorStart: &ss,
+		SectorEnd:   &se,
+		OffsetStart: &os,
+		OffsetEnd:   &oe,
+		Nonce:       nonce,
+	}
+
+	hash := new(kkProto.FlashHashResponse)
+	if _, err := kk.keepkeyExchange(flash, hash); err != nil {
+		return []byte{}, err
+	}
+	return hash.GetData(), nil
+}
+
 // EthereumGetAddress returns the ethereum address associated with the given node path
 // Optionally you can display  the address on the screen
 func (kk *Keepkey) EthereumGetAddress(path []uint32, display bool) ([]byte, error) {
