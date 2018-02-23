@@ -28,7 +28,6 @@ var getEthAddressCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Println(path)
 		addr, err := kk.EthereumGetAddress(path, buttonProtection)
 		if err != nil {
 			fmt.Println(err)

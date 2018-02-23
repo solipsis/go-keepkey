@@ -1,22 +1,21 @@
-package main
+package keepkey
 
 import (
 	"fmt"
 	"log"
 	"sync"
-
-	"github.com/solipsis/go-keepkey/pkg/keepkey"
+	"testing"
 )
 
-func main() {
-	kks, err := keepkey.GetDevices()
+func testMultiplexingKeepkeys(t *testing.T) {
+	kks, err := GetDevices()
 	if err != nil {
 		log.Fatal(err)
 	}
 	var wg sync.WaitGroup
 	for _, kk := range kks {
 		wg.Add(1)
-		go func(kk *keepkey.Keepkey) {
+		go func(kk *Keepkey) {
 			defer wg.Done()
 			_, err := kk.Ping("Ripple", true, false, false)
 			if err != nil {
