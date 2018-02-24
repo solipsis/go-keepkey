@@ -32,7 +32,7 @@ func testMultiplexingKeepkeys(t *testing.T) {
 				fmt.Println(err)
 				return
 			}
-			_, err = kk.Ping("> Ellie", true, false, false)
+			_, err = kk.Ping("< Ellie", true, false, false)
 			if err != nil {
 				fmt.Println(err)
 				return
