@@ -414,38 +414,36 @@ func (kk *Keepkey) UploadFirmware(path string) (int, error) {
 }
 
 func (kk *Keepkey) WriteFlash(sector uint8, offset uint16, data []byte) ([]byte, error) {
+	/*
+		s := uint32(sector)
+		o := uint32(offset)
+		write := &kkProto.FlashWrite{
+			Sector: &s,
+			Offset: &o,
+			Data:   data,
+		}
 
-	s := uint32(sector)
-	o := uint32(offset)
-	write := &kkProto.FlashWrite{
-		Sector: &s,
-		Offset: &o,
-		Data:   data,
-	}
+		resp := new(kkProto.FlashHashResponse)
+		if _, err := kk.keepkeyExchange(write, resp); err != nil {
+			return []byte{}, err
+		}
 
-	resp := new(kkProto.FlashHashResponse)
-	if _, err := kk.keepkeyExchange(write, resp); err != nil {
-		return []byte{}, err
-	}
-
-	return resp.GetData(), nil
+		return resp.GetData(), nil
+	*/
+	return []byte{}, nil
 }
 
-func (kk *Keepkey) FlashHash(secStart, secEnd uint8, offStart, offEnd uint16, nonce []byte) ([]byte, error) {
+func (kk *Keepkey) FlashHash(address, challenge []byte, length uint32) ([]byte, error) {
 
-	ss := uint32(secStart)
-	se := uint32(secEnd)
-	os := uint32(offStart)
-	oe := uint32(offEnd)
-
+	addr := binary.LittleEndian.Uint32(address)
 	flash := &kkProto.FlashHash{
-		SectorStart: &ss,
-		SectorEnd:   &se,
-		OffsetStart: &os,
-		OffsetEnd:   &oe,
-		Nonce:       nonce,
+		Address:   &addr,
+		Length:    &length,
+		Challenge: challenge,
 	}
 
+	//msg, _ := json.MarshalIndent(flash, "", "	")
+	//fmt.Println(string(msg))
 	hash := new(kkProto.FlashHashResponse)
 	if _, err := kk.keepkeyExchange(flash, hash); err != nil {
 		return []byte{}, err

@@ -73,6 +73,7 @@ enum MessageType {
  	MessageType_ApplyPolicies = 83 [(wire_in) = true];
 	MessageType_FlashHash = 84 [(wire_in) = true];
 	MessageType_FlashWrite = 85 [(wire_in) = true];
+	MessageType_FlashHashResponse = 86 [(wire_out) = true];
 	MessageType_DebugLinkDecision = 100 [(wire_debug_in) = true];
 	MessageType_DebugLinkGetState = 101 [(wire_debug_in) = true];
 	MessageType_DebugLinkState = 102 [(wire_debug_out) = true];
@@ -732,11 +733,9 @@ message ApplyPolicies {
  * @next Failure
  */
 message FlashHash {
-	optional uint32 sector_start = 1;
-	optional uint32 offset_start = 2;
-	optional uint32 sector_end = 3;
-	optional uint32 offset_end = 4;
-	optional bytes nonce = 5;
+	optional uint32 address = 1;
+	optional uint32 length = 2;
+	optional bytes challenge = 3;
 }
 
 /**
@@ -745,9 +744,8 @@ message FlashHash {
  * @next Failure
  */
 message FlashWrite {
-	optional uint32 sector = 1;
-	optional uint32 offset = 2;
-	optional bytes data = 3;
+	optional uint32 address = 1;
+	optional bytes data = 2;
 }
 
 /**

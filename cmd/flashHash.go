@@ -9,20 +9,16 @@ import (
 )
 
 func init() {
-	flashHashCmd.Flags().Uint8VarP(&sectorStart, "sectorStart", "s", 0, "memory sector start")
-	flashHashCmd.Flags().Uint8VarP(&sectorEnd, "sectorEnd", "e", 0, "memory sector end")
-	flashHashCmd.Flags().Uint16VarP(&offsetStart, "offStart", "", 0, "sector offset start")
-	flashHashCmd.Flags().Uint16VarP(&offsetEnd, "offEnd", "", 0, "sector offset end")
-	flashHashCmd.Flags().StringVarP(&flashNonce, "nonce", "n", "", "challenge response nonce")
+	flashHashCmd.Flags().Uint32VarP(&length, "length", "l", 0, "length of memory to hash")
+	flashHashCmd.Flags().StringVarP(&challenge, "challenge", "c", "", "challenge response nonce")
+	flashHashCmd.Flags().StringVarP(&memAddress, "address", "a", "", "memory address")
 	rootCmd.AddCommand(flashHashCmd)
 }
 
 var (
-	sectorStart uint8
-	sectorEnd   uint8
-	offsetStart uint16
-	offsetEnd   uint16
-	flashNonce  string
+	length     uint32
+	memAddress string
+	challenge  string
 )
 
 var flashHashCmd = &cobra.Command{
@@ -31,8 +27,9 @@ var flashHashCmd = &cobra.Command{
 	Long:  "Requests hash of certain segment of flash memory",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		nonce := mustParseHex(nonce)
-		data, err := kk.FlashHash(sectorStart, sectorEnd, offsetStart, offsetEnd, nonce)
+		nonce := mustParseHex(challenge)
+		addr := mustParseHex(memAddress)
+		data, err := kk.FlashHash(addr, nonce, length)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
