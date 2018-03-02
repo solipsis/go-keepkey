@@ -87,8 +87,8 @@ It has these top-level messages:
 	FlashHash
 	FlashWrite
 	FlashHashResponse
-	FlashDump
-	FlashDumpResponse
+	DebugLinkFlashDump
+	DebugLinkFlashDumpResponse
 	FirmwareErase
 	FirmwareUpload
 	DebugLinkDecision

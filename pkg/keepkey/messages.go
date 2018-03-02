@@ -433,14 +433,12 @@ func (kk *Keepkey) WriteFlash(address uint32, data []byte) ([]byte, error) {
 
 func (kk *Keepkey) FlashDump(address, length uint32) ([]byte, error) {
 
-	dump := &kkProto.FlashDump{
+	dump := &kkProto.DebugLinkFlashDump{
 		Address: &address,
 		Length:  &length,
 	}
 
-	resp := new(kkProto.FlashDumpResponse)
-	//fmt.Println(dump)
-	//fmt.Println(resp)
+	resp := new(kkProto.DebugLinkFlashDumpResponse)
 	if _, err := kk.keepkeyExchange(dump, resp); err != nil {
 		return []byte{}, err
 	}

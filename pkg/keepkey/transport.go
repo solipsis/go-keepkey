@@ -112,11 +112,6 @@ func GetDevices() ([]*Keepkey, error) {
 // based on trezorExchange()
 // in https://github.com/go-ethereum/accounts/usbwallet/trezor.go
 func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) (int, error) {
-	//fmt.Println("req:", req, kkProto.Name(kkProto.Type(req)))
-	//for _, res := range results {
-	//fmt.Println("res: ", kkProto.Name(kkProto.Type(res)))
-	//}
-	//fmt.Println("res: ", results)
 
 	device := kk.device
 	debug := false
@@ -157,9 +152,8 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		}
 	}
 
-	// TODO; support debug requests that return data
 	// don't wait for response if sending debug buttonPress
-	if debug {
+	if debug && kkProto.Name(kkProto.Type(req)) == "MessageType_DebugLinkDecision" {
 		return 0, nil
 	}
 
@@ -254,7 +248,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 // Is the message one we need to send over the debug HID interface
 func isDebugMessage(req interface{}) bool {
 	switch req.(type) {
-	case *kkProto.DebugLinkDecision, *kkProto.DebugLinkFillConfig, *kkProto.DebugLinkGetState:
+	case *kkProto.DebugLinkDecision, *kkProto.DebugLinkFillConfig, *kkProto.DebugLinkGetState, *kkProto.DebugLinkFlashDump:
 		return true
 	}
 	return false
