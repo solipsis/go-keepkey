@@ -34,7 +34,7 @@ func GetDevices() ([]*Keepkey, error) {
 
 	kk := newKeepkey()
 
-	// tie a keepkey to its debug interface
+	// tuple of keepkey and optionally its debug interface
 	type infoPair struct {
 		device, debug hid.DeviceInfo
 	}
@@ -43,12 +43,12 @@ func GetDevices() ([]*Keepkey, error) {
 	// corresponding debug link if enabled
 	deviceMap := make(map[string]*infoPair)
 	for _, info := range hid.Enumerate(kk.vendorID, 0) {
+
+		// TODO: revisit this when keepkey adds additional product id's
 		if info.ProductID == kk.productID {
 
-			// get all but the last character of the hid path
-			// if the path ends with 0 it is a device if it ends with 1
-			// the device is advertising a debug connection
-			pathKey := info.Path[:len(info.Path)-1]
+			// Use serial string to differentiate between different keepkeys
+			pathKey := info.Serial
 			if deviceMap[pathKey] == nil {
 				deviceMap[pathKey] = new(infoPair)
 			}
@@ -57,7 +57,6 @@ func GetDevices() ([]*Keepkey, error) {
 			if strings.HasSuffix(info.Path, "1") {
 				deviceMap[pathKey].debug = info
 			} else {
-				fmt.Println("Device: ", info)
 				deviceMap[pathKey].device = info
 			}
 		}
@@ -153,9 +152,8 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		}
 	}
 
-	// TODO; support debug requests that return data
 	// don't wait for response if sending debug buttonPress
-	if debug {
+	if debug && kkProto.Name(kkProto.Type(req)) == "MessageType_DebugLinkDecision" {
 		return 0, nil
 	}
 
@@ -250,7 +248,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 // Is the message one we need to send over the debug HID interface
 func isDebugMessage(req interface{}) bool {
 	switch req.(type) {
-	case *kkProto.DebugLinkDecision, *kkProto.DebugLinkFillConfig, *kkProto.DebugLinkGetState:
+	case *kkProto.DebugLinkDecision, *kkProto.DebugLinkFillConfig, *kkProto.DebugLinkGetState, *kkProto.DebugLinkFlashDump:
 		return true
 	}
 	return false

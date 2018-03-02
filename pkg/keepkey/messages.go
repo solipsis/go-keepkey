@@ -413,6 +413,56 @@ func (kk *Keepkey) UploadFirmware(path string) (int, error) {
 	return len(data), nil
 }
 
+// WriteFlash writes the given block of data to the given address
+// data should be at most 1024 bytes at a time
+func (kk *Keepkey) FlashWrite(address uint32, data []byte) ([]byte, error) {
+
+	write := &kkProto.FlashWrite{
+		Address: &address,
+		Data:    data,
+	}
+
+	resp := new(kkProto.FlashHashResponse)
+	if _, err := kk.keepkeyExchange(write, resp); err != nil {
+		return []byte{}, err
+	}
+
+	return resp.GetData(), nil
+}
+
+// DumpFlash dumps length bytes of data from a given address
+// length should be at most 1024
+func (kk *Keepkey) FlashDump(address, length uint32) ([]byte, error) {
+
+	dump := &kkProto.DebugLinkFlashDump{
+		Address: &address,
+		Length:  &length,
+	}
+
+	resp := new(kkProto.DebugLinkFlashDumpResponse)
+	if _, err := kk.keepkeyExchange(dump, resp); err != nil {
+		return []byte{}, err
+	}
+
+	return resp.GetData(), nil
+}
+
+func (kk *Keepkey) FlashHash(address, challenge []byte, length uint32) ([]byte, error) {
+
+	addr := binary.BigEndian.Uint32(address)
+	flash := &kkProto.FlashHash{
+		Address:   &addr,
+		Length:    &length,
+		Challenge: challenge,
+	}
+
+	hash := new(kkProto.FlashHashResponse)
+	if _, err := kk.keepkeyExchange(flash, hash); err != nil {
+		return []byte{}, err
+	}
+	return hash.GetData(), nil
+}
+
 // EthereumGetAddress returns the ethereum address associated with the given node path
 // Optionally you can display  the address on the screen
 func (kk *Keepkey) EthereumGetAddress(path []uint32, display bool) ([]byte, error) {

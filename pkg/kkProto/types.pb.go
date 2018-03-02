@@ -84,6 +84,11 @@ It has these top-level messages:
 	SignIdentity
 	SignedIdentity
 	ApplyPolicies
+	FlashHash
+	FlashWrite
+	FlashHashResponse
+	DebugLinkFlashDump
+	DebugLinkFlashDumpResponse
 	FirmwareErase
 	FirmwareUpload
 	DebugLinkDecision
