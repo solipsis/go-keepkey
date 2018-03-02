@@ -74,6 +74,8 @@ enum MessageType {
 	MessageType_FlashHash = 84 [(wire_in) = true];
 	MessageType_FlashWrite = 85 [(wire_in) = true];
 	MessageType_FlashHashResponse = 86 [(wire_out) = true];
+	MessageType_FlashDump = 87 [(wire_in) = true];
+	MessageType_FlashDumpResponse = 88 [(wire_out) = true];
 	MessageType_DebugLinkDecision = 100 [(wire_debug_in) = true];
 	MessageType_DebugLinkGetState = 101 [(wire_debug_in) = true];
 	MessageType_DebugLinkState = 102 [(wire_debug_out) = true];
@@ -757,7 +759,14 @@ message FlashWrite {
  	optional bytes data = 1;
  }
 
+message FlashDump {
+	optional uint32 address = 1;
+	optional uint32 length = 2;
+}
 
+message FlashDumpResponse {
+	optional bytes data = 1;
+}
 
 /////////////////////////
 // Bootloader messages //

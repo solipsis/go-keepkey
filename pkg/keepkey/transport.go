@@ -34,7 +34,7 @@ func GetDevices() ([]*Keepkey, error) {
 
 	kk := newKeepkey()
 
-	// tie a keepkey to its debug interface
+	// tuple of keepkey and optionally its debug interface
 	type infoPair struct {
 		device, debug hid.DeviceInfo
 	}
@@ -43,12 +43,12 @@ func GetDevices() ([]*Keepkey, error) {
 	// corresponding debug link if enabled
 	deviceMap := make(map[string]*infoPair)
 	for _, info := range hid.Enumerate(kk.vendorID, 0) {
+
+		// TODO: revisit this when keepkey adds additional product id's
 		if info.ProductID == kk.productID {
 
-			// get all but the last character of the hid path
-			// if the path ends with 0 it is a device if it ends with 1
-			// the device is advertising a debug connection
-			pathKey := info.Path[:len(info.Path)-1]
+			// Use serial string to differentiate between different keepkeys
+			pathKey := info.Serial
 			if deviceMap[pathKey] == nil {
 				deviceMap[pathKey] = new(infoPair)
 			}
@@ -57,7 +57,6 @@ func GetDevices() ([]*Keepkey, error) {
 			if strings.HasSuffix(info.Path, "1") {
 				deviceMap[pathKey].debug = info
 			} else {
-				fmt.Println("Device: ", info)
 				deviceMap[pathKey].device = info
 			}
 		}
@@ -113,6 +112,11 @@ func GetDevices() ([]*Keepkey, error) {
 // based on trezorExchange()
 // in https://github.com/go-ethereum/accounts/usbwallet/trezor.go
 func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) (int, error) {
+	//fmt.Println("req:", req, kkProto.Name(kkProto.Type(req)))
+	//for _, res := range results {
+	//fmt.Println("res: ", kkProto.Name(kkProto.Type(res)))
+	//}
+	//fmt.Println("res: ", results)
 
 	device := kk.device
 	debug := false

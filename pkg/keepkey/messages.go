@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -413,14 +414,11 @@ func (kk *Keepkey) UploadFirmware(path string) (int, error) {
 	return len(data), nil
 }
 
-func (kk *Keepkey) WriteFlash(sector uint8, offset uint16, data []byte) ([]byte, error) {
+func (kk *Keepkey) WriteFlash(address uint32, data []byte) ([]byte, error) {
 	/*
-		s := uint32(sector)
-		o := uint32(offset)
 		write := &kkProto.FlashWrite{
-			Sector: &s,
-			Offset: &o,
-			Data:   data,
+			Address: &address,
+			Data:    &data,
 		}
 
 		resp := new(kkProto.FlashHashResponse)
@@ -433,17 +431,34 @@ func (kk *Keepkey) WriteFlash(sector uint8, offset uint16, data []byte) ([]byte,
 	return []byte{}, nil
 }
 
+func (kk *Keepkey) FlashDump(address, length uint32) ([]byte, error) {
+
+	dump := &kkProto.FlashDump{
+		Address: &address,
+		Length:  &length,
+	}
+
+	resp := new(kkProto.FlashDumpResponse)
+	//fmt.Println(dump)
+	//fmt.Println(resp)
+	if _, err := kk.keepkeyExchange(dump, resp); err != nil {
+		return []byte{}, err
+	}
+
+	return resp.GetData(), nil
+}
+
 func (kk *Keepkey) FlashHash(address, challenge []byte, length uint32) ([]byte, error) {
 
-	addr := binary.LittleEndian.Uint32(address)
+	addr := binary.BigEndian.Uint32(address)
 	flash := &kkProto.FlashHash{
 		Address:   &addr,
 		Length:    &length,
 		Challenge: challenge,
 	}
 
-	//msg, _ := json.MarshalIndent(flash, "", "	")
-	//fmt.Println(string(msg))
+	msg, _ := json.MarshalIndent(flash, "", "	")
+	fmt.Println(string(msg))
 	hash := new(kkProto.FlashHashResponse)
 	if _, err := kk.keepkeyExchange(flash, hash); err != nil {
 		return []byte{}, err

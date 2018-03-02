@@ -1,10 +1,6 @@
 package cmd
 
 import (
-	"encoding/hex"
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 )
 
@@ -27,13 +23,15 @@ var writeHashCmd = &cobra.Command{
 	Long:  "Writes data over flash sectors",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		data := mustParseHex(flashData)
-		resp, err := kk.WriteFlash(sector, offset, data)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		/*
+			data := mustParseHex(flashData)
+			resp, err := kk.WriteFlash(sector, offset, data)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 
-		fmt.Println(hex.EncodeToString(resp))
+			fmt.Println(hex.EncodeToString(resp))
+		*/
 	},
 }
