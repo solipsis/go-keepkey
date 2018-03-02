@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -414,23 +413,25 @@ func (kk *Keepkey) UploadFirmware(path string) (int, error) {
 	return len(data), nil
 }
 
-func (kk *Keepkey) WriteFlash(address uint32, data []byte) ([]byte, error) {
-	/*
-		write := &kkProto.FlashWrite{
-			Address: &address,
-			Data:    &data,
-		}
+// WriteFlash writes the given block of data to the given address
+// data should be at most 1024 bytes at a time
+func (kk *Keepkey) FlashWrite(address uint32, data []byte) ([]byte, error) {
 
-		resp := new(kkProto.FlashHashResponse)
-		if _, err := kk.keepkeyExchange(write, resp); err != nil {
-			return []byte{}, err
-		}
+	write := &kkProto.FlashWrite{
+		Address: &address,
+		Data:    data,
+	}
 
-		return resp.GetData(), nil
-	*/
-	return []byte{}, nil
+	resp := new(kkProto.FlashHashResponse)
+	if _, err := kk.keepkeyExchange(write, resp); err != nil {
+		return []byte{}, err
+	}
+
+	return resp.GetData(), nil
 }
 
+// DumpFlash dumps length bytes of data from a given address
+// length should be at most 1024
 func (kk *Keepkey) FlashDump(address, length uint32) ([]byte, error) {
 
 	dump := &kkProto.DebugLinkFlashDump{
@@ -455,8 +456,6 @@ func (kk *Keepkey) FlashHash(address, challenge []byte, length uint32) ([]byte, 
 		Challenge: challenge,
 	}
 
-	msg, _ := json.MarshalIndent(flash, "", "	")
-	fmt.Println(string(msg))
 	hash := new(kkProto.FlashHashResponse)
 	if _, err := kk.keepkeyExchange(flash, hash); err != nil {
 		return []byte{}, err
