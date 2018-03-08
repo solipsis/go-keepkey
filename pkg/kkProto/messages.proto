@@ -3,6 +3,8 @@
  *
  */
 
+syntax = "proto2";
+
 // Sugar for easier handling in Java
 option java_package = "com.keepkey.deviceprotocol";
 option java_outer_classname = "KeepKeyMessage";
@@ -76,6 +78,7 @@ enum MessageType {
 	MessageType_FlashHashResponse = 86 [(wire_out) = true];
 	MessageType_DebugLinkFlashDump = 87 [(wire_debug_in) = true];
 	MessageType_DebugLinkFlashDumpResponse = 88 [(wire_debug_out) = true];
+	MessageType_SoftReset = 89 [(wire_debug_in) = true];
 	MessageType_DebugLinkDecision = 100 [(wire_debug_in) = true];
 	MessageType_DebugLinkGetState = 101 [(wire_debug_in) = true];
 	MessageType_DebugLinkState = 102 [(wire_debug_out) = true];
@@ -375,6 +378,7 @@ message EntropyRequest {
  */
 message EntropyAck {
 	optional bytes entropy = 1;				// 256 bits (32 bytes) of random data
+	optional uint32 words_per_page = 2; 			// maximum number of recovery words to show on the screen at a time
 }
 
 /**
@@ -748,6 +752,7 @@ message FlashHash {
 message FlashWrite {
 	optional uint32 address = 1;
 	optional bytes data = 2;
+	optional bool erase = 3;
 }
 
 /**
@@ -775,6 +780,12 @@ message DebugLinkFlashDump {
  */
 message DebugLinkFlashDumpResponse {
 	optional bytes data = 1;
+}
+
+/**
+ * Request: Ask the device to perform a soft reset
+ */
+message SoftReset {
 }
 
 /////////////////////////

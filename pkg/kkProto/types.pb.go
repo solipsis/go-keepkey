@@ -89,6 +89,7 @@ It has these top-level messages:
 	FlashHashResponse
 	DebugLinkFlashDump
 	DebugLinkFlashDumpResponse
+	SoftReset
 	FirmwareErase
 	FirmwareUpload
 	DebugLinkDecision

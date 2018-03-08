@@ -232,6 +232,16 @@ func (kk *Keepkey) WipeDevice() error {
 	return nil
 }
 
+// SoftReset power cycles the device. The device only responds to
+// this message while in manufacturer mode
+func (kk *Keepkey) SoftReset() error {
+
+	if _, err := kk.keepkeyExchange(&kkProto.SoftReset{}, &kkProto.Success{}); err != nil {
+		return err
+	}
+	return nil
+}
+
 // FirmwareErase askes the device to erase its firmware
 func (kk *Keepkey) FirmwareErase() error {
 
@@ -311,7 +321,7 @@ const (
 // ResetDevice generates a new seed using device RNG for entropy and applies the provided settings
 // The device must be uninitialized  before calling this method. This can be achieved by calling WipeDevice()
 // The device entropy strength must be 128, 192, or 256
-func (kk *Keepkey) ResetDevice(strength entropyStrength, addtlEntropy []byte, showRandom, passphrase, pin bool, label string) error {
+func (kk *Keepkey) ResetDevice(strength entropyStrength, addtlEntropy []byte, showRandom, passphrase, pin bool, label string, wordsPerScreen uint32) error {
 
 	deviceEntropyStrength := uint32(strength)
 	reset := &kkProto.ResetDevice{
@@ -326,7 +336,7 @@ func (kk *Keepkey) ResetDevice(strength entropyStrength, addtlEntropy []byte, sh
 	}
 
 	// The device will respond asking for additional entropy from the computer
-	if _, err := kk.keepkeyExchange(&kkProto.EntropyAck{Entropy: addtlEntropy}, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(&kkProto.EntropyAck{Entropy: addtlEntropy, WordsPerPage: &wordsPerScreen}, &kkProto.Success{}); err != nil {
 		return err
 	}
 	return nil

@@ -14,7 +14,7 @@ import (
 func init() {
 	flashDumpCmd.Flags().StringVarP(&memAddress, "address", "a", "", "memory address")
 	flashDumpCmd.Flags().StringVarP(&file, "file", "f", "", "store result to file")
-	flashDumpCmd.Flags().Uint32VarP(&length, "length", "l", 0, "length of memory to dump")
+	flashDumpCmd.Flags().Uint32VarP(&length, "length", "l", 1024, "length of memory to dump")
 	rootCmd.AddCommand(flashDumpCmd)
 }
 

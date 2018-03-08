@@ -12,6 +12,7 @@ import (
 
 func init() {
 	resetDeviceCmd.Flags().Uint32VarP(&entropyStrength, "entropyStrength", "e", 128, "Bits of entropy for the device to generate, must be (128, 196, 256)")
+	resetDeviceCmd.Flags().Uint32VarP(&wordsPerScreen, "wordsPerScreen", "w", 12, "Maximum number of recovery words to show on a single screen. Max=24")
 	resetDeviceCmd.Flags().BoolVarP(&displayRandom, "displayRandom", "d", false, "Display generated entropy on the device")
 	resetDeviceCmd.Flags().BoolVarP(&passphraseProtection, "passphrase", "", false, "Enable passphrase protection")
 	resetDeviceCmd.Flags().BoolVarP(&pinProtection, "pin", "", true, "Enable pin protection")
@@ -21,6 +22,7 @@ func init() {
 }
 
 var entropyStrength uint32
+var wordsPerScreen uint32
 var addtlEntropy string
 var displayRandom bool
 
@@ -46,7 +48,7 @@ var resetDeviceCmd = &cobra.Command{
 			ent = keepkey.Entropy256
 		}
 
-		err := kk.ResetDevice(ent, entropy, displayRandom, passphraseProtection, pinProtection, label)
+		err := kk.ResetDevice(ent, entropy, displayRandom, passphraseProtection, pinProtection, label, wordsPerScreen)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
