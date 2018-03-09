@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -494,9 +495,9 @@ func (kk *Keepkey) EthereumGetAddress(path []uint32, display bool) ([]byte, erro
 
 // Sign an ethereum transaction using a given node path
 // The user may be prompted for a pin and/or passphrase if they are enabled
-func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, tx *EthereumTx) (*kkProto.EthereumTxRequest, error) {
+func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, tx *EthereumTx) (*EthereumTx, error) {
 
-	// Convert Address to hex
+	// Decode Address from hex
 	to := tx.Recipient
 	if strings.HasPrefix(to, "0x") || strings.HasPrefix(to, "0X") {
 		to = to[2:]
@@ -524,8 +525,17 @@ func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, tx *EthereumTx) (*kkP
 	if tx.GasPrice != nil {
 		est.GasPrice = emptyOrVal(tx.GasPrice)
 	}
-	fmt.Println("forwarding eth")
-	return kk.ethereumSignTx(est)
+
+	resp, err := kk.ethereumSignTx(est)
+	if err != nil {
+		return tx, errors.New("Unable to sign transaction:" + err.Error())
+	}
+	// add signature data to the initial tx
+	tx.V = resp.GetSignatureV()
+	tx.R = resp.GetSignatureR()
+	tx.S = resp.GetSignatureS()
+
+	return tx, nil
 }
 
 func (kk *Keepkey) ethereumSignTx(est *kkProto.EthereumSignTx) (*kkProto.EthereumTxRequest, error) {
@@ -546,15 +556,18 @@ func (kk *Keepkey) ethereumSignTx(est *kkProto.EthereumSignTx) (*kkProto.Ethereu
 			return nil, err
 		}
 	}
-	signature := append(append(response.GetSignatureR(), response.GetSignatureS()...), byte(response.GetSignatureV()))
-	v := make([]byte, 4)
-	binary.LittleEndian.PutUint32(v, response.GetSignatureV())
-	fmt.Println("signature:", hex.EncodeToString(signature))
-	fmt.Println("v:", hex.EncodeToString(v))
-	fmt.Println("r:", hex.EncodeToString(response.GetSignatureR()))
-	fmt.Println("s:", hex.EncodeToString(response.GetSignatureS()))
-	fmt.Println("hash:", hex.EncodeToString(response.Hash))
-	fmt.Println(response)
+
+	/*
+		signature := append(append(response.GetSignatureR(), response.GetSignatureS()...), byte(response.GetSignatureV()))
+		v := make([]byte, 4)
+		binary.LittleEndian.PutUint32(v, response.GetSignatureV())
+		fmt.Println("signature:", hex.EncodeToString(signature))
+		fmt.Println("v:", hex.EncodeToString(v))
+		fmt.Println("r:", hex.EncodeToString(response.GetSignatureR()))
+		fmt.Println("s:", hex.EncodeToString(response.GetSignatureS()))
+		fmt.Println("hash:", hex.EncodeToString(response.Hash))
+		fmt.Println(response)
+	*/
 	return response, nil
 	// TODO: use signer as soon as eip 155 support is added
 	/*

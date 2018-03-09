@@ -204,9 +204,9 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	if kind == uint16(kkProto.MessageType_MessageType_ButtonRequest) {
 		promptButton()
 		if kk.debug != nil {
-			t := true
+			//t := true
 			fmt.Println("sending debug press")
-			kk.keepkeyExchange(&kkProto.DebugLinkDecision{YesNo: &t}, &kkProto.Success{})
+			//kk.keepkeyExchange(&kkProto.DebugLinkDecision{YesNo: &t}, &kkProto.Success{})
 		}
 		return kk.keepkeyExchange(&kkProto.ButtonAck{}, results...)
 	}

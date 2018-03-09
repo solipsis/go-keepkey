@@ -34,7 +34,6 @@ var signEthTxCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		//TODO; cleanup this interaction
-		fmt.Println(nonce, recipient, amount, gasLimit, gasPrice)
 		// amount, gasLimit, gasPrice
 		var amt, gl, gp *big.Int = new(big.Int), new(big.Int), new(big.Int)
 
@@ -54,8 +53,15 @@ var signEthTxCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		//TODO; RLP encode ouptut so people can publish the raw transaction
 		tx := keepkey.NewTransaction(n, recipient, amt, gl, gp, []byte{})
 		kk.EthereumSignTx([]uint32{0}, tx)
+
+		raw, err := tx.ToRawTransaction()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		fmt.Println("RawTx: " + raw)
 	},
 }

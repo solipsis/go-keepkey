@@ -1,7 +1,15 @@
 package keepkey
 
-import "math/big"
-import "github.com/solipsis/go-keepkey/pkg/kkProto"
+import (
+	"bytes"
+	"encoding/hex"
+	"errors"
+	"math/big"
+	"strings"
+
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/solipsis/go-keepkey/pkg/kkProto"
+)
 
 type EthereumTx struct {
 	Nonce     uint64
@@ -13,7 +21,7 @@ type EthereumTx struct {
 	Recipient string
 
 	// Signature values
-	V []byte
+	V uint32
 	R []byte
 	S []byte
 }
@@ -96,4 +104,41 @@ func NewTokenTransaction(tx *EthereumTx, tShortcut, tRecipient string, tValue *b
 		TokenValue:    tValue,
 	}
 	return tokenTx
+}
+
+// ToRawTransaction encodes a transaction as a Raw Transaction hex string
+// using the standard RLP encoding as defined in the yellow paper
+// If you are intending to broadcast this transaction the 3 signature values must be set
+func (tx *EthereumTx) ToRawTransaction() (string, error) {
+
+	// Decode Address from hex
+	// TODO: should be specialized type on EthereumTx so i don't need to always do this
+	to := tx.Recipient
+	if strings.HasPrefix(to, "0x") || strings.HasPrefix(to, "0X") {
+		to = to[2:]
+	}
+	addrBytes := make([]byte, 20)
+	if _, err := hex.Decode(addrBytes, []byte(to)); err != nil {
+		return "", errors.New("malformed to address:" + err.Error())
+	}
+
+	// Prepare tx data to be encoded. Fields must be in the following order
+	// nonce, gasPrice, gasLimit, to, value, data, sig v, sig r, sig s
+	buf := new(bytes.Buffer)
+	var arr []interface{}
+	arr = append(arr, tx.Nonce)
+	arr = append(arr, tx.GasPrice)
+	arr = append(arr, tx.GasLimit)
+	arr = append(arr, addrBytes)
+	arr = append(arr, tx.Amount)
+	arr = append(arr, tx.Data)
+	arr = append(arr, tx.V)
+	arr = append(arr, tx.R)
+	arr = append(arr, tx.S)
+
+	if err := rlp.Encode(buf, arr); err != nil {
+		return "", errors.New("malformed tx:" + err.Error())
+	}
+
+	return "0x" + hex.EncodeToString(buf.Bytes()), nil
 }
