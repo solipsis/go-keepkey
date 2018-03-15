@@ -5,11 +5,11 @@ go-keepkey is a client library and CLI for interacting with Keepkey storage devi
 ## Installation ##
 
 	go get -u github.com/solipsis/go-keepkey
+	go install github.com/solipsis/go-keepkey
   
 ## Command Line Interface (CLI) ##
   ```
-go build (go install if you want to add go-keepkey to your path)
-./go-keepkey --help
+go-keepkey --help
 
 Usage:
   go-keepkey [command]
@@ -73,6 +73,32 @@ kk.LoadDevice(strings.Split(words, " "), pin, label, usePassphrase, useChecksum)
 ```go
 path := "path/to/firmware.bin"
 numBtyes, err := kk.UploadFirmware(path)
+```
+
+### Sign an ethereum transaction ###
+```go
+var nonce uint64 = 20
+recipient := "0x6b68c94fc31A10707f9c0f1281aad5ec9a4eeff0" 
+amount := big.NewInt(1337)   
+gasLimit := big.NewInt(80000)
+gasPrice := big.NewInt(22000000000)
+data := []byte{}
+
+// Create the transaction
+tx := NewTransaction(nonce, recipient, amount, gasLimit, gasPrice, data)                                                     
+
+// Ask the device to sign the transaction
+tx, err := kk.EthereumSignTx(ethPath, tx)                                                                                                                                                                                           
+if err != nil {                                                                                                                                                                                                                     
+        log.Fatalf("Unable to sign tx: %s", err)                                                                                                                                                                                      
+}   
+
+// Encode the transaction as raw transaction hex string															     
+raw, err := tx.ToRawTransaction()                                                                                                                                                                                                   
+if err != nil {                                                                                                                                                                                                                     
+        log.Fatalf("Unable to convert to raw tx:", err)                                                                                                                                                                                
+}      
+fmt.Println(raw)
 ```
 
 ### Get an ethereum address for a BIP44 node ###
