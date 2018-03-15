@@ -527,6 +527,7 @@ func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, tx *EthereumTx) (*Eth
 	}
 
 	resp, err := kk.ethereumSignTx(est)
+
 	if err != nil {
 		return tx, errors.New("Unable to sign transaction:" + err.Error())
 	}
