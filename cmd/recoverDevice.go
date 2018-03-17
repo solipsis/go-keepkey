@@ -23,7 +23,11 @@ var recoverDeviceCmd = &cobra.Command{
 	Short: "Begin interactive device recovery",
 	Long:  `Begin the interactive device recovery workflow. The device must be uninitialized in order to recover it. See [wipeDevice]`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := kk.RecoverDevice(numWords, enforceWordList, useCharacterCipher); err != nil {
+		//if err := kk.RecoverDevice(numWords, enforceWordList, useCharacterCipher); err != nil {
+		//fmt.Println(err)
+		//os.Exit(1)
+		//}
+		if err := kk.RecoverDeviceRaw(numWords, enforceWordList); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
