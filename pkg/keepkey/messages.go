@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -130,11 +131,15 @@ func (kk *Keepkey) VerifyMessage(addr, coinName string, msg, sig []byte) error {
 	return err
 }
 
+// Recovery process that consumes each input as it is typed providing
+// a better user experience than the prompt version
 func (kk *Keepkey) recoverDeviceRaw(numWords uint32, enforceWordlist bool) error {
 
+	// TODO: stylings in seperate file?
 	cyan := color.New(color.FgCyan).Add(color.Bold).SprintFunc()
 	magenta := color.New(color.FgMagenta).Add(color.Underline).Add(color.Bold).SprintFunc()
 	yellow := color.New(color.FgYellow).Add(color.Underline).Add(color.Bold).SprintFunc()
+	green := color.New(color.FgGreen).Add(color.Underline).Add(color.Bold).SprintFunc()
 	fmt.Println(cyan("\nUse the character cipher on the device to enter your recovery words"))
 	fmt.Println(cyan("When the word is complete on the device use "), yellow("<space>"), cyan(" to continue to the next word"))
 	fmt.Println(cyan("Use "), yellow("<backspace>"), cyan(" or "), yellow("<delete>"), cyan(" to go back"))
@@ -162,10 +167,15 @@ func (kk *Keepkey) recoverDeviceRaw(numWords uint32, enforceWordlist bool) error
 		return err
 	}
 
+	// Setup prompts
+	position := green("Word #"+strconv.Itoa(int(req.GetWordPos()+1))) + " | " +
+		green("letter #"+strconv.Itoa(int(req.GetCharacterPos()+1))) + "\n"
 	prefix := []rune(magenta("Enter words:"))
 	in := make([]byte, 4)  // Input buffer for any utf8 character
 	buf := make([]rune, 0) // Obscured buffer of all recieved input
 	buf = append(buf, prefix...)
+	t.Write([]byte(position))
+	t.Write([]byte("\r"))
 	t.Write([]byte(string(buf)))
 
 	var wordNum uint32
@@ -201,7 +211,13 @@ func (kk *Keepkey) recoverDeviceRaw(numWords uint32, enforceWordlist bool) error
 		}
 
 		// redraw prompt
+		position = green("Word #"+strconv.Itoa(int(req.GetWordPos()+1))) + " | " +
+			green("letter #"+strconv.Itoa(int(req.GetCharacterPos()+1))) + "\n"
 		wordNum = req.GetWordPos()
+		t.Write([]byte("\033[F"))
+		t.Write([]byte("\033[2K"))
+		t.Write([]byte("\r"))
+		t.Write([]byte(position))
 		t.Write([]byte("\033[2K"))
 		t.Write([]byte("\r"))
 		t.Write([]byte(string(buf)))
@@ -220,6 +236,7 @@ func (kk *Keepkey) recoverDeviceRaw(numWords uint32, enforceWordlist bool) error
 // RecoverDevice initiates the interactive seed recovery process in which the user is asked to input their seed words
 // The useCharacterCipher flag tells the device to recover using the on-screen cypher or through entering
 // the words in a random order. This method must be called on an uninitialized device
+// Raw Mode provides a superior user experience but may not be available in all shell environments
 func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordList, useCharacterCipher, rawMode bool) error {
 	if rawMode {
 		return kk.recoverDeviceRaw(numWords, enforceWordList)
@@ -227,6 +244,7 @@ func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordList, useCharacterC
 	return kk.recoverDevicePrompt(numWords, enforceWordList, useCharacterCipher)
 }
 
+// Recovery process that repeatedly prompts the user for each character
 func (kk *Keepkey) recoverDevicePrompt(numWords uint32, enforceWordlist, useCharacterCipher bool) error {
 
 	recover := &kkProto.RecoveryDevice{
