@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
+	"os"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -511,6 +512,11 @@ func (kk *Keepkey) DecryptKeyValue(path []uint32, key string, val []byte) ([]byt
 // to the device. It returns the number of bytes written and an error
 func (kk *Keepkey) UploadFirmware(path string) (int, error) {
 
+	// Sign the firmware if it is not already signed
+	if err := signFirmware(path); err != nil {
+		return 0, err
+	}
+
 	// load firmware and compute the hash
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -537,6 +543,62 @@ func (kk *Keepkey) UploadFirmware(path string) (int, error) {
 		return 0, err
 	}
 	return len(data), nil
+}
+
+// adds signature header to unsigned firmware. This signing process is unofficial and the device
+// will warn that the firmware is not officially signed. For development purposes
+// TODO: this method is probably unsafe concurrently
+func signFirmware(path string) error {
+
+	var (
+		file     *os.File
+		stat     os.FileInfo
+		unsigned []byte
+		err      error
+	)
+
+	// Read in the unsigned binary and get file metadata
+	if file, err = os.Open(path); err != nil {
+		return err
+	}
+	defer file.Close()
+	if unsigned, err = ioutil.ReadAll(file); err != nil {
+		return err
+	}
+	if stat, err = file.Stat(); err != nil {
+		return err
+	}
+
+	// Don't add signature again if it is already signed
+	if len(unsigned) > 4 && string(unsigned[0:4]) == "KPKY" {
+		return nil
+	}
+
+	buf := bytes.Buffer{}
+	buf.Write([]byte("KPKY")) // magic header
+
+	sizeBuf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(sizeBuf, uint32(stat.Size()))
+	buf.Write(sizeBuf)                  // file size in little endian
+	buf.Write([]byte{0x01, 0x02, 0x03}) // signature indexes
+	buf.Write([]byte{0x01})             // flags
+
+	var reserved [52]byte
+	buf.Write(reserved[:]) // 52 reserved bytes
+
+	// insert 3 bogus signatures
+	for i := 0; i < 3; i++ {
+		sig := make([]byte, 64)
+		sig[0] = byte(10 + i)
+		buf.Write(sig)
+	}
+
+	// append binary
+	buf.Write(unsigned)
+
+	// Write out new signed binary
+	file.Close()
+	return ioutil.WriteFile(path, buf.Bytes(), 0644)
 }
 
 // WriteFlash writes the given block of data to the given address
