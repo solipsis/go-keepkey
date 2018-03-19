@@ -10,9 +10,13 @@ import (
 	"io"
 	"io/ioutil"
 	"math/big"
+	"strconv"
 	"strings"
+	"unicode/utf8"
 
+	"github.com/fatih/color"
 	"github.com/karalabe/hid"
+	"github.com/pkg/term"
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
 )
 
@@ -127,10 +131,121 @@ func (kk *Keepkey) VerifyMessage(addr, coinName string, msg, sig []byte) error {
 	return err
 }
 
+// Recovery process that consumes each input as it is typed providing
+// a better user experience than the prompt version
+func (kk *Keepkey) recoverDeviceRaw(numWords uint32, enforceWordlist bool) error {
+
+	// TODO: stylings in seperate file?
+	cyan := color.New(color.FgCyan).Add(color.Bold).SprintFunc()
+	magenta := color.New(color.FgMagenta).Add(color.Underline).Add(color.Bold).SprintFunc()
+	yellow := color.New(color.FgYellow).Add(color.Underline).Add(color.Bold).SprintFunc()
+	green := color.New(color.FgGreen).Add(color.Underline).Add(color.Bold).SprintFunc()
+	fmt.Println(cyan("\nUse the character cipher on the device to enter your recovery words"))
+	fmt.Println(cyan("When the word is complete on the device use "), yellow("<space>"), cyan(" to continue to the next word"))
+	fmt.Println(cyan("Use "), yellow("<backspace>"), cyan(" or "), yellow("<delete>"), cyan(" to go back"))
+
+	// Get handle to active shell and enable raw mode
+	t, err := term.Open("/dev/tty")
+	if err != nil {
+		return errors.New("Failed to open active terminal:" + err.Error())
+	}
+	defer t.Close()
+	defer t.Restore()
+	if err := term.RawMode(t); err != nil {
+		return errors.New("Failed to enable raw mode:" + err.Error())
+	}
+
+	// start the recovery process
+	useCharacterCipher := true
+	recover := &kkProto.RecoveryDevice{
+		WordCount:          &numWords,
+		EnforceWordlist:    &enforceWordlist,
+		UseCharacterCipher: &useCharacterCipher,
+	}
+	req := new(kkProto.CharacterRequest)
+	if _, err := kk.keepkeyExchange(recover, req); err != nil {
+		return err
+	}
+
+	// Setup prompts
+	position := green("Word #"+strconv.Itoa(int(req.GetWordPos()+1))) + " | " +
+		green("letter #"+strconv.Itoa(int(req.GetCharacterPos()+1))) + "\n"
+	prefix := []rune(magenta("Enter words:"))
+	in := make([]byte, 4)  // Input buffer for any utf8 character
+	buf := make([]rune, 0) // Obscured buffer of all recieved input
+	buf = append(buf, prefix...)
+	t.Write([]byte(position))
+	t.Write([]byte("\r"))
+	t.Write([]byte(string(buf)))
+
+	var wordNum uint32
+	for wordNum < numWords {
+
+		t.Read(in)
+		r, _ := utf8.DecodeRune(in)
+
+		// Ignore input if not a letter, space, or backspace
+		if !(r >= 'a' && r <= 'z' || r == ' ' || r == '\b' || r == 127) {
+			continue
+		}
+
+		// Update the terminal buffer prompt
+		del := false
+		if r == '\b' || r == 127 {
+			del = true
+			if len(buf) > len(prefix) {
+				buf = buf[:len(buf)-1]
+			}
+		} else if r == ' ' {
+			buf = append(buf, ' ')
+		} else {
+			// obscure the letters typed
+			buf = append(buf, '*')
+		}
+
+		// Send the character to the device
+		s := string(r)
+		req = new(kkProto.CharacterRequest)
+		if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Character: &s, Delete: &del}, req); err != nil {
+			return err
+		}
+
+		// redraw prompt
+		position = green("Word #"+strconv.Itoa(int(req.GetWordPos()+1))) + " | " +
+			green("letter #"+strconv.Itoa(int(req.GetCharacterPos()+1))) + "\n"
+		wordNum = req.GetWordPos()
+		t.Write([]byte("\033[F"))
+		t.Write([]byte("\033[2K"))
+		t.Write([]byte("\r"))
+		t.Write([]byte(position))
+		t.Write([]byte("\033[2K"))
+		t.Write([]byte("\r"))
+		t.Write([]byte(string(buf)))
+	}
+
+	// Tell the device we are done
+	done := true
+	if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Done: &done}, &kkProto.Success{}); err != nil {
+		return err
+	}
+	t.Write([]byte("\n"))
+	return nil
+
+}
+
 // RecoverDevice initiates the interactive seed recovery process in which the user is asked to input their seed words
 // The useCharacterCipher flag tells the device to recover using the on-screen cypher or through entering
 // the words in a random order. This method must be called on an uninitialized device
-func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordlist, useCharacterCipher bool) error {
+// Raw Mode provides a superior user experience but may not be available in all shell environments
+func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordList, useCharacterCipher, rawMode bool) error {
+	if rawMode {
+		return kk.recoverDeviceRaw(numWords, enforceWordList)
+	}
+	return kk.recoverDevicePrompt(numWords, enforceWordList, useCharacterCipher)
+}
+
+// Recovery process that repeatedly prompts the user for each character
+func (kk *Keepkey) recoverDevicePrompt(numWords uint32, enforceWordlist, useCharacterCipher bool) error {
 
 	recover := &kkProto.RecoveryDevice{
 		WordCount:          &numWords,

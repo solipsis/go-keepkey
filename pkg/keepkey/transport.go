@@ -2,9 +2,12 @@ package keepkey
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"strings"
 
 	"github.com/golang/protobuf/proto"
@@ -19,13 +22,28 @@ type Keepkey struct {
 	device, debug *hid.Device
 	vendorID      uint16
 	productID     uint16
+	logger
 }
 
 func newKeepkey() *Keepkey {
 	return &Keepkey{
 		vendorID:  0x2B24,
 		productID: 0x0001,
+		logger:    log.New(ioutil.Discard, "", 0),
 	}
+}
+
+type logger interface {
+	Printf(string, ...interface{})
+}
+
+func (kk *Keepkey) log(str string, args ...interface{}) {
+	kk.logger.Printf(str, args...)
+}
+
+// Set the logging device for this keepkey
+func (kk *Keepkey) SetLogger(l logger) {
+	kk.logger = l
 }
 
 // GetDevices establishes connections to all available KeepKey devices and
@@ -107,11 +125,21 @@ func GetDevices() ([]*Keepkey, error) {
 	return devices, nil
 }
 
+// convert message to indented json output
+func pretty(m proto.Message) string {
+	buf, err := json.MarshalIndent(m, "", "    ")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return string(buf)
+}
+
 // keepkeyExchange sends a request to the device and streams back the results
 // if multiple results are possible the index of the result message is also returned
 // based on trezorExchange()
 // in https://github.com/go-ethereum/accounts/usbwallet/trezor.go
 func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) (int, error) {
+	kk.log("Sending payload to device:\n%s:\n%s", kkProto.Name(kkProto.Type(req)), pretty(req))
 
 	device := kk.device
 	debug := false
@@ -191,6 +219,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 
 	// Try to parse the reply into the requested reply message
 	if kind == uint16(kkProto.MessageType_MessageType_Failure) {
+
 		// keepkey returned a failure, extract and return the message
 		failure := new(kkProto.Failure)
 		if err := proto.Unmarshal(reply, failure); err != nil {
@@ -212,7 +241,6 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	}
 	// handle pin matrix requests and forward the results
 	if kind == uint16(kkProto.MessageType_MessageType_PinMatrixRequest) {
-		fmt.Println("Pin requested")
 		pin, err := promptPin()
 		if err != nil {
 			return 0, err
@@ -233,7 +261,9 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	// marshal it and return the index of the expected result it was
 	for i, res := range results {
 		if kkProto.Type(res) == kind {
-			return i, proto.Unmarshal(reply, res)
+			err := proto.Unmarshal(reply, res)
+			kk.log("Recieved message from device:\n%s:\n%s", kkProto.Name(kkProto.Type(res)), pretty(res))
+			return i, err
 		}
 	}
 

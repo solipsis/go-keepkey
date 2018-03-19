@@ -11,6 +11,9 @@ import (
 
 var kk *keepkey.Keepkey
 
+// debug level logging
+var debug bool
+
 // Button, Pin, and passphrase protection
 var buttonProtection, pinProtection, passphraseProtection bool
 
@@ -35,6 +38,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	// TODO: init on each subcommand instead
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "", false, "Debug level logging")
 	cobra.OnInitialize(connectDevice)
 }
 
@@ -54,4 +58,7 @@ func connectDevice() {
 	}
 	// Connect to the first found keepkey
 	kk = kks[0]
+	if debug {
+		kk.SetLogger(log.New(os.Stdout, "DEBUG: ", log.Ltime))
+	}
 }
