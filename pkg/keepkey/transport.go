@@ -261,7 +261,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	// handle button requests and forward the results
 	if kind == uint16(kkProto.MessageType_MessageType_ButtonRequest) {
 		promptButton()
-		if kk.debug != nil {
+		if kk.autoButton && kk.debug != nil {
 			t := true
 			fmt.Println("sending debug press")
 			kk.keepkeyExchange(&kkProto.DebugLinkDecision{YesNo: &t}, &kkProto.Success{})
