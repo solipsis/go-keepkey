@@ -44,6 +44,7 @@ func promptPin() (string, error) {
 	prompt := promptui.Prompt{
 		Label:    "Pin",
 		Validate: validate,
+		Mask:     '*',
 	}
 	res, err := prompt.Run()
 	if err != nil {
