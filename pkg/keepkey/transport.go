@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/golang/protobuf/proto"
@@ -15,22 +15,45 @@ import (
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
 )
 
-// Represents an open HID connection to a keepkey and possibly a
+const (
+	vendorID  uint16 = 0x2B24
+	productID uint16 = 0x0001
+)
+
+// Keepkey represents an open HID connection to a keepkey and possibly a
 // connection to the debug link if enabled
 type Keepkey struct {
 	info          hid.DeviceInfo
 	device, debug *hid.Device
+	autoButton    bool // Automatically send button presses. DebugLink must be enabled in the firmware
 	vendorID      uint16
 	productID     uint16
 	logger
 }
 
+// KeepkeyConfig specifies various attributes that can be set on a Keepkey connection such as
+// where to write debug logs and whether to automatically push the button on a debugLink enabled device
+type KeepkeyConfig struct {
+	Logger     logger
+	AutoButton bool // Automatically send button presses. DebugLink must be enabled in the firmware
+}
+
 func newKeepkey() *Keepkey {
 	return &Keepkey{
-		vendorID:  0x2B24,
-		productID: 0x0001,
-		logger:    log.New(ioutil.Discard, "", 0),
+		vendorID:   vendorID,
+		productID:  productID,
+		autoButton: true,
+		//logger:    log.New(ioutil.Discard, "", 0),
+		logger: log.New(os.Stdout, "", 0),
 	}
+}
+
+func newKeepkeyFromConfig(cfg *KeepkeyConfig) *Keepkey {
+	kk := newKeepkey()
+	kk.logger = cfg.Logger
+	kk.autoButton = cfg.AutoButton
+
+	return kk
 }
 
 type logger interface {
@@ -41,29 +64,27 @@ func (kk *Keepkey) log(str string, args ...interface{}) {
 	kk.logger.Printf(str, args...)
 }
 
-// Set the logging device for this keepkey
+// SetLogger sets the logging device for this keepkey
 func (kk *Keepkey) SetLogger(l logger) {
 	kk.logger = l
 }
 
-// GetDevices establishes connections to all available KeepKey devices and
-// their debug interfaces if that is enabled in the firmware
-func GetDevices() ([]*Keepkey, error) {
+// tuple of keepkey and optionally its debug interface
+type infoPair struct {
+	device, debug hid.DeviceInfo
+}
 
-	kk := newKeepkey()
-
-	// tuple of keepkey and optionally its debug interface
-	type infoPair struct {
-		device, debug hid.DeviceInfo
-	}
+// discoverKeepkeys searches advertised hid interfaces for devices
+// that appear to be keepkeys
+func discoverKeepkeys() map[string]*infoPair {
 
 	// Iterate over all connected keepkeys pairing each one with its
 	// corresponding debug link if enabled
 	deviceMap := make(map[string]*infoPair)
-	for _, info := range hid.Enumerate(kk.vendorID, 0) {
+	for _, info := range hid.Enumerate(vendorID, 0) {
 
 		// TODO: revisit this when keepkey adds additional product id's
-		if info.ProductID == kk.productID {
+		if info.ProductID == productID {
 
 			// Use serial string to differentiate between different keepkeys
 			pathKey := info.Serial
@@ -80,11 +101,19 @@ func GetDevices() ([]*Keepkey, error) {
 		}
 	}
 
+	return deviceMap
+}
+
+// GetDevices establishes connections to all available KeepKey devices and
+// their debug interfaces if that is enabled in the firmware
+// the provided config is applied to all found keepkeys
+func GetDevices(cfg *KeepkeyConfig) ([]*Keepkey, error) {
+
 	// Open HID connections to all devices found in the previous step
 	var deviceInfo, debugInfo hid.DeviceInfo
 	devices := make([]*Keepkey, 0)
-	for _, pair := range deviceMap {
-		kk = newKeepkey()
+	for _, pair := range discoverKeepkeys() {
+		kk := newKeepkeyFromConfig(cfg)
 		deviceInfo = pair.device
 		debugInfo = pair.debug
 
@@ -95,7 +124,7 @@ func GetDevices() ([]*Keepkey, error) {
 		// Open connection to device
 		device, err := deviceInfo.Open()
 		if err != nil {
-			fmt.Println("Unable to connect to device: dropping, ", err)
+			fmt.Printf("Unable to connect to device: %v dropping..., %s", deviceInfo, err)
 			continue
 		}
 

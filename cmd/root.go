@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -13,6 +14,9 @@ var kk *keepkey.Keepkey
 
 // debug level logging
 var debug bool
+
+// automatic button presses in debug mode
+var debugButtonPress bool
 
 // Button, Pin, and passphrase protection
 var buttonProtection, pinProtection, passphraseProtection bool
@@ -29,6 +33,8 @@ var nodePath string
 // Coin type i.e (Bitcoin, Ethereum)
 var coinType string
 
+var logger = log.New(ioutil.Discard, "", 0)
+
 // Root cobra CLI command
 var rootCmd = &cobra.Command{
 	Use:   "go-keepkey",
@@ -39,6 +45,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	// TODO: init on each subcommand instead
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "", false, "Debug level logging")
+	rootCmd.PersistentFlags().BoolVarP(&debugButtonPress, "autoButton", "", true, "Automatic button pressing if debug link is enabled")
 	cobra.OnInitialize(connectDevice)
 }
 
@@ -51,8 +58,13 @@ func Execute() {
 }
 
 func connectDevice() {
-	var err error
-	kks, err := keepkey.GetDevices()
+
+	// TODO: add way to specify files as output not just Stdout
+	if debug {
+		logger = log.New(os.Stdout, "Log: ", 0)
+	}
+
+	kks, err := keepkey.GetDevices(&keepkey.KeepkeyConfig{Logger: logger, AutoButton: debugButtonPress})
 	if err != nil {
 		log.Fatal(err)
 	}

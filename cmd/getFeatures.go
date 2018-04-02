@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -30,5 +31,6 @@ var getFeaturesCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		fmt.Println(string(buf))
+		fmt.Println("BootloaderHash:", hex.EncodeToString(f.GetBootloaderHash()))
 	},
 }

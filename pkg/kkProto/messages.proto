@@ -378,7 +378,7 @@ message EntropyRequest {
  */
 message EntropyAck {
 	optional bytes entropy = 1;				// 256 bits (32 bytes) of random data
-	optional uint32 words_per_page = 2; 			// maximum number of recovery words to show on the screen at a time
+	optional uint32 words_per_page = 2;			// max number of words to show per page (max = 24)
 }
 
 /**
