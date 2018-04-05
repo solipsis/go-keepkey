@@ -1,6 +1,7 @@
 # go-keepkey #
 
-go-keepkey is a client library and CLI for interacting with Keepkey storage devices.
+go-keepkey is a client library and CLI for interacting with Keepkey storage devices.  
+This library is unofficial and in early development. For the official client see https://github.com/keepkey/python-keepkey
 
 ## Installation ##
 
