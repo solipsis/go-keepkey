@@ -1,8 +1,9 @@
 /*
  * Exchange communication
  *
- * @keepkey_version 2.0.0
  */
+
+syntax = "proto2";
 
 // Sugar for easier handling in Java
 option java_package = "com.keepkey.device-protocol";

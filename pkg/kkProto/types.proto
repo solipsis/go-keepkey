@@ -1,8 +1,9 @@
 /*
  * Types for KeepKey Communication
  *
- * @keepkey_version	2.0.0
  */
+
+syntax = "proto2";
 
 // Sugar for easier handling in Java
 option java_package = "com.keepkey.deviceprotocol";
@@ -173,7 +174,8 @@ message CoinType {
 	optional uint32 bip44_account_path = 9;
 	optional uint32 forkid = 12;
 	optional uint32 decimals = 13;
-	optional string contract_address = 14;
+	optional bytes contract_address = 14;
+	optional bytes gas_limit = 15;
 }
 
 /**

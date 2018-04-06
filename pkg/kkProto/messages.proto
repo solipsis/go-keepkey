@@ -130,6 +130,7 @@ message Features {
 	optional bool passphrase_cached = 17;		// is passphrase already cached in session?
 	repeated PolicyType policies = 18;			// policies
 	optional string model = 21;			// device hardware model
+	optional string whitelabel_name = 22; // Firmware whitelabel name
 }
 
 /**
@@ -378,7 +379,6 @@ message EntropyRequest {
  */
 message EntropyAck {
 	optional bytes entropy = 1;				// 256 bits (32 bytes) of random data
-	optional uint32 words_per_page = 2;			// max number of words to show per page (max = 24)
 }
 
 /**

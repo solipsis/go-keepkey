@@ -452,8 +452,13 @@ func (kk *Keepkey) ResetDevice(strength entropyStrength, addtlEntropy []byte, sh
 		return err
 	}
 
+	ack := &kkProto.EntropyAck{
+		Entropy: addtlEntropy,
+		//WordsPerGape: &wordsPerScreen, TODO: re-enable when patch makes it upstream
+	}
+
 	// The device will respond asking for additional entropy from the computer
-	if _, err := kk.keepkeyExchange(&kkProto.EntropyAck{Entropy: addtlEntropy, WordsPerPage: &wordsPerScreen}, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(ack, &kkProto.Success{}); err != nil {
 		return err
 	}
 	return nil
