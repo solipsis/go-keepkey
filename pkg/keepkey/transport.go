@@ -61,7 +61,9 @@ type logger interface {
 }
 
 func (kk *Keepkey) log(str string, args ...interface{}) {
-	kk.logger.Printf(str, args...)
+	if kk.logger != nil {
+		kk.logger.Printf(str, args...)
+	}
 }
 
 // SetLogger sets the logging device for this keepkey
