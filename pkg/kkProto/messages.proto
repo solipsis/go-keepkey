@@ -85,6 +85,7 @@ enum MessageType {
 	MessageType_DebugLinkStop = 103 [(wire_debug_in) = true];
 	MessageType_DebugLinkLog = 104 [(wire_debug_out) = true];
 	MessageType_DebugLinkFillConfig = 105 [(wire_debug_out) = true];
+	MessageType_DebugLinkScreenDump = 106 [(wire_debug_out) = true];
 }
 
 ////////////////////
@@ -130,7 +131,7 @@ message Features {
 	optional bool passphrase_cached = 17;		// is passphrase already cached in session?
 	repeated PolicyType policies = 18;			// policies
 	optional string model = 21;			// device hardware model
-	optional string whitelabel_name = 22; // Firmware whitelabel name
+	optional string firmware_variant = 22; // Firmware variant
 }
 
 /**
@@ -870,3 +871,13 @@ message DebugLinkLog {
  */
 message DebugLinkFillConfig {
 }
+
+/**
+ * Response: Device sending screen state
+ */
+message DebugLinkScreenDump {
+	optional bytes screen = 1;
+}
+
+
+

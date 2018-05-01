@@ -9,7 +9,9 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
+	drawille "github.com/exrook/drawille-go"
 	"github.com/golang/protobuf/proto"
 	"github.com/karalabe/hid"
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
@@ -29,6 +31,12 @@ type Keepkey struct {
 	vendorID      uint16
 	productID     uint16
 	logger
+	deviceQueue, debugQueue chan *deviceResponse
+}
+
+type deviceResponse struct {
+	reply []byte
+	kind  uint16
 }
 
 // KeepkeyConfig specifies various attributes that can be set on a Keepkey connection such as
@@ -52,16 +60,185 @@ func newKeepkeyFromConfig(cfg *KeepkeyConfig) *Keepkey {
 	kk := newKeepkey()
 	kk.logger = cfg.Logger
 	kk.autoButton = cfg.AutoButton
+	kk.deviceQueue = make(chan *deviceResponse) //TODO: buffered or unbuffered
+	kk.debugQueue = make(chan *deviceResponse)
 
 	return kk
 }
+
+var screenBuf []byte
+
+func listenForMessages(in io.Reader, out chan *deviceResponse) {
+	for {
+		// stream the reply back in 64 byte chunks
+		chunk := make([]byte, 64)
+		var reply []byte
+		var kind uint16
+		for {
+			// Read next chunk
+			if _, err := io.ReadFull(in, chunk); err != nil {
+				fmt.Println("Unable to read chunk from device:", err)
+				break
+				//return 0, err
+			}
+
+			//TODO: check transport header
+
+			//if it is the first chunk, retreive the reply message type and total message length
+			var payload []byte
+
+			if len(reply) == 0 {
+				kind = binary.BigEndian.Uint16(chunk[3:5])
+				reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
+				payload = chunk[9:]
+			} else {
+				payload = chunk[1:]
+			}
+			// Append to the reply and stop when filled up
+			if left := cap(reply) - len(reply); left > len(payload) {
+				reply = append(reply, payload...)
+			} else {
+				reply = append(reply, payload[:left]...)
+				break
+			}
+		}
+		//fmt.Println("Sending device message to queue")
+		//fmt.Println(kkProto.Name(kind))
+		if kkProto.Name(kind) == "MessageType_DebugLinkScreenDump" {
+			dump := new(kkProto.DebugLinkScreenDump)
+			err := proto.Unmarshal(reply, dump)
+			if err != nil {
+				fmt.Println("Can't read screen dump")
+				continue
+			}
+
+			sc := dump.GetScreen()
+			screenBuf = append(screenBuf, sc...)
+			if len(screenBuf) >= 16384 {
+				d := drawille.NewCanvas()
+				for x := 0; x < 256; x++ {
+					for y := 0; y < 64; y++ {
+						if screenBuf[x+(y*256)] > 0 {
+							d.Set(x, y)
+						}
+					}
+				}
+				fmt.Println(d)
+				d.Clear()
+				screenBuf = make([]byte, 0)
+			}
+			continue
+
+			//fmt.Println("Screen:", dump.GetScreen())
+			/*
+				sc := dump.GetScreen()
+				s := drawille.NewCanvas()
+				for x := 0; x < 256; x++ {
+					for y := 0; y < 32; y++ {
+						if sc[x+(y*256)] > 0 {
+							s.Set(x, y)
+						}
+					}
+				}
+				fmt.Println(s)
+				s.Clear()
+				continue
+			*/
+
+		}
+		out <- &deviceResponse{reply, kind}
+	}
+}
+
+/*
+func (kk *Keepkey) listenDevice() {
+
+
+	for {
+		// stream the reply back in 64 byte chunks
+		chunk := make([]byte, 64)
+		var reply []byte
+		var kind uint16
+		for {
+			// Read next chunk
+			if _, err := io.ReadFull(kk.device, chunk); err != nil {
+				fmt.Println("Unable to read chunk from device:", err)
+				break
+				//return 0, err
+			}
+
+			//TODO: check transport header
+
+			//if it is the first chunk, retreive the reply message type and total message length
+			var payload []byte
+
+			if len(reply) == 0 {
+				kind = binary.BigEndian.Uint16(chunk[3:5])
+				reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
+				payload = chunk[9:]
+			} else {
+				payload = chunk[1:]
+			}
+			// Append to the reply and stop when filled up
+			if left := cap(reply) - len(reply); left > len(payload) {
+				reply = append(reply, payload...)
+			} else {
+				reply = append(reply, payload[:left]...)
+				break
+			}
+		}
+		fmt.Println("Sending device message to queue")
+		kk.deviceQueue <- &deviceResponse{reply, kind}
+	}
+}
+func (kk *Keepkey) listenDebug() {
+	// stream the reply back in 64 byte chunks
+	for {
+		chunk := make([]byte, 64)
+		var reply []byte
+		var kind uint16
+		for {
+			// Read next chunk
+			if _, err := io.ReadFull(kk.debug, chunk); err != nil {
+				fmt.Println("Unable to read chunk from device:", err)
+				break
+				//return 0, err
+			}
+
+			//TODO: check transport header
+
+			//if it is the first chunk, retreive the reply message type and total message length
+			var payload []byte
+
+			if len(reply) == 0 {
+				kind = binary.BigEndian.Uint16(chunk[3:5])
+				reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
+				payload = chunk[9:]
+			} else {
+				payload = chunk[1:]
+			}
+			// Append to the reply and stop when filled up
+			if left := cap(reply) - len(reply); left > len(payload) {
+				reply = append(reply, payload...)
+			} else {
+				reply = append(reply, payload[:left]...)
+				break
+			}
+		}
+		fmt.Println("sending debug message to queue")
+		kk.debugQueue <- &deviceResponse{reply, kind}
+	}
+}
+*/
 
 type logger interface {
 	Printf(string, ...interface{})
 }
 
 func (kk *Keepkey) log(str string, args ...interface{}) {
-	kk.logger.Printf(str, args...)
+	if kk.logger != nil {
+		kk.logger.Printf(str, args...)
+	}
 }
 
 // SetLogger sets the logging device for this keepkey
@@ -127,6 +304,8 @@ func GetDevices(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 			fmt.Printf("Unable to connect to device: %v dropping..., %s", deviceInfo, err)
 			continue
 		}
+		kk.device = device
+		go listenForMessages(device, kk.deviceQueue)
 
 		// debug
 		if debugInfo.Path != "" {
@@ -137,6 +316,7 @@ func GetDevices(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 			}
 			fmt.Println("Debug link established")
 			kk.debug = debug
+			go listenForMessages(debug, kk.debugQueue)
 		}
 
 		// Ping the device and ask for its features
@@ -193,6 +373,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	chunk := make([]byte, 64)
 	chunk[0] = 0x3f // HID Magic number???
 
+	pSize := len(payload)
 	for len(payload) > 0 {
 		// create the message to stream and pad with zeroes if necessary
 		if len(payload) > 63 {
@@ -207,6 +388,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		if _, err := device.Write(chunk); err != nil {
 			return 0, err
 		}
+		progress(pSize-len(payload), pSize)
 	}
 
 	// don't wait for response if sending debug buttonPress
@@ -214,37 +396,16 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		return 0, nil
 	}
 
-	// stream the reply back in 64 byte chunks
-	var (
-		kind  uint16
-		reply []byte
-	)
-	for {
-		// Read next chunk
-		if _, err := io.ReadFull(device, chunk); err != nil {
-			return 0, err
-		}
-
-		//TODO: check transport header
-
-		//if it is the first chunk, retreive the reply message type and total message length
-		var payload []byte
-
-		if len(reply) == 0 {
-			kind = binary.BigEndian.Uint16(chunk[3:5])
-			reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
-			payload = chunk[9:]
-		} else {
-			payload = chunk[1:]
-		}
-		// Append to the reply and stop when filled up
-		if left := cap(reply) - len(reply); left > len(payload) {
-			reply = append(reply, payload...)
-		} else {
-			reply = append(reply, payload[:left]...)
-			break
-		}
+	// Read from the proper message queue
+	var response *deviceResponse
+	if debug {
+		response = <-kk.debugQueue
+	} else {
+		response = <-kk.deviceQueue
 	}
+	kind := response.kind
+	reply := response.reply
+	time.Sleep(1 * time.Second)
 
 	// Try to parse the reply into the requested reply message
 	if kind == uint16(kkProto.MessageType_MessageType_Failure) {
@@ -321,4 +482,14 @@ func (kk *Keepkey) Close() {
 	}
 	kk.device.Close()
 	kk.device = nil
+}
+
+// TODO; Hella not threadsafe
+func progress(cur, tot int) {
+	ticks := 50
+	str := "[" + strings.Repeat("*", ticks*cur/tot) + strings.Repeat(" ", ticks-(ticks*cur/tot)) + "]"
+	fmt.Printf("\r%s", str)
+	//fmt.Printf("[")
+	//fmt.Printf("
+
 }

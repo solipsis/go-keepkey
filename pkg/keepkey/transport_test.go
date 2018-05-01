@@ -8,7 +8,7 @@ import (
 )
 
 func testMultiplexingKeepkeys(t *testing.T) {
-	kks, err := GetDevices()
+	kks, err := GetDevices(&KeepkeyConfig{})
 	if err != nil {
 		log.Fatal(err)
 	}
