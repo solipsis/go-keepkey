@@ -1,13 +1,11 @@
 package keepkey
 
 import (
-	"bytes"
 	"encoding/hex"
 	"errors"
 	"math/big"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
 )
 
@@ -124,7 +122,7 @@ func (tx *EthereumTx) ToRawTransaction() (string, error) {
 
 	// Prepare tx data to be encoded. Fields must be in the following order
 	// nonce, gasPrice, gasLimit, to, value, data, sig v, sig r, sig s
-	buf := new(bytes.Buffer)
+	//buf := new(bytes.Buffer)
 	var arr []interface{}
 	arr = append(arr, tx.Nonce)
 	arr = append(arr, tx.GasPrice)
@@ -136,9 +134,12 @@ func (tx *EthereumTx) ToRawTransaction() (string, error) {
 	arr = append(arr, tx.R)
 	arr = append(arr, tx.S)
 
-	if err := rlp.Encode(buf, arr); err != nil {
-		return "", errors.New("malformed tx:" + err.Error())
-	}
+	/*
+		if err := rlp.Encode(buf, arr); err != nil {
+			return "", errors.New("malformed tx:" + err.Error())
+		}
 
-	return "0x" + hex.EncodeToString(buf.Bytes()), nil
+		return "0x" + hex.EncodeToString(buf.Bytes()), nil
+	*/
+	return "IMPLEMENT ME", nil
 }
