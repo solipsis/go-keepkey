@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"time"
 
 	drawille "github.com/exrook/drawille-go"
 	"github.com/golang/protobuf/proto"
@@ -60,8 +59,8 @@ func newKeepkeyFromConfig(cfg *KeepkeyConfig) *Keepkey {
 	kk := newKeepkey()
 	kk.logger = cfg.Logger
 	kk.autoButton = cfg.AutoButton
-	kk.deviceQueue = make(chan *deviceResponse) //TODO: buffered or unbuffered
-	kk.debugQueue = make(chan *deviceResponse)
+	kk.deviceQueue = make(chan *deviceResponse, 1) //TODO: buffered or unbuffered
+	kk.debugQueue = make(chan *deviceResponse, 1)
 
 	return kk
 }
@@ -77,9 +76,8 @@ func listenForMessages(in io.Reader, out chan *deviceResponse) {
 		for {
 			// Read next chunk
 			if _, err := io.ReadFull(in, chunk); err != nil {
-				fmt.Println("Unable to read chunk from device:", err)
+				fmt.Println("Unable to read chunk from device:", err) // TODO: move to device specific log
 				break
-				//return 0, err
 			}
 
 			//TODO: check transport header
@@ -102,8 +100,7 @@ func listenForMessages(in io.Reader, out chan *deviceResponse) {
 				break
 			}
 		}
-		//fmt.Println("Sending device message to queue")
-		//fmt.Println(kkProto.Name(kind))
+
 		if kkProto.Name(kind) == "MessageType_DebugLinkScreenDump" {
 			dump := new(kkProto.DebugLinkScreenDump)
 			err := proto.Unmarshal(reply, dump)
@@ -149,87 +146,6 @@ func listenForMessages(in io.Reader, out chan *deviceResponse) {
 		out <- &deviceResponse{reply, kind}
 	}
 }
-
-/*
-func (kk *Keepkey) listenDevice() {
-
-
-	for {
-		// stream the reply back in 64 byte chunks
-		chunk := make([]byte, 64)
-		var reply []byte
-		var kind uint16
-		for {
-			// Read next chunk
-			if _, err := io.ReadFull(kk.device, chunk); err != nil {
-				fmt.Println("Unable to read chunk from device:", err)
-				break
-				//return 0, err
-			}
-
-			//TODO: check transport header
-
-			//if it is the first chunk, retreive the reply message type and total message length
-			var payload []byte
-
-			if len(reply) == 0 {
-				kind = binary.BigEndian.Uint16(chunk[3:5])
-				reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
-				payload = chunk[9:]
-			} else {
-				payload = chunk[1:]
-			}
-			// Append to the reply and stop when filled up
-			if left := cap(reply) - len(reply); left > len(payload) {
-				reply = append(reply, payload...)
-			} else {
-				reply = append(reply, payload[:left]...)
-				break
-			}
-		}
-		fmt.Println("Sending device message to queue")
-		kk.deviceQueue <- &deviceResponse{reply, kind}
-	}
-}
-func (kk *Keepkey) listenDebug() {
-	// stream the reply back in 64 byte chunks
-	for {
-		chunk := make([]byte, 64)
-		var reply []byte
-		var kind uint16
-		for {
-			// Read next chunk
-			if _, err := io.ReadFull(kk.debug, chunk); err != nil {
-				fmt.Println("Unable to read chunk from device:", err)
-				break
-				//return 0, err
-			}
-
-			//TODO: check transport header
-
-			//if it is the first chunk, retreive the reply message type and total message length
-			var payload []byte
-
-			if len(reply) == 0 {
-				kind = binary.BigEndian.Uint16(chunk[3:5])
-				reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
-				payload = chunk[9:]
-			} else {
-				payload = chunk[1:]
-			}
-			// Append to the reply and stop when filled up
-			if left := cap(reply) - len(reply); left > len(payload) {
-				reply = append(reply, payload...)
-			} else {
-				reply = append(reply, payload[:left]...)
-				break
-			}
-		}
-		fmt.Println("sending debug message to queue")
-		kk.debugQueue <- &deviceResponse{reply, kind}
-	}
-}
-*/
 
 type logger interface {
 	Printf(string, ...interface{})
@@ -405,7 +321,6 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	}
 	kind := response.kind
 	reply := response.reply
-	time.Sleep(1 * time.Second)
 
 	// Try to parse the reply into the requested reply message
 	if kind == uint16(kkProto.MessageType_MessageType_Failure) {
