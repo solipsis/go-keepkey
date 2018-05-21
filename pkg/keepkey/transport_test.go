@@ -2,16 +2,11 @@ package keepkey
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"testing"
 )
 
-func testMultiplexingKeepkeys(t *testing.T) {
-	kks, err := GetDevices(&KeepkeyConfig{})
-	if err != nil {
-		log.Fatal(err)
-	}
+func TestMultiplexingKeepkeys(t *testing.T) {
 	var wg sync.WaitGroup
 	for _, kk := range kks {
 		wg.Add(1)
@@ -40,5 +35,4 @@ func testMultiplexingKeepkeys(t *testing.T) {
 		}(kk)
 	}
 	wg.Wait()
-	fmt.Println("done")
 }

@@ -217,7 +217,7 @@ func GetDevices(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 		// Open connection to device
 		device, err := deviceInfo.Open()
 		if err != nil {
-			fmt.Printf("Unable to connect to device: %v dropping..., %s", deviceInfo, err)
+			fmt.Printf("Unable to connect to HID: %v dropping..., %s\n", deviceInfo, err)
 			continue
 		}
 		kk.device = device
@@ -237,7 +237,7 @@ func GetDevices(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 
 		// Ping the device and ask for its features
 		if _, err = kk.Initialize(device); err != nil {
-			fmt.Println("Unable to contact device, dropping: ", err)
+			fmt.Println("Device failed to respond to initial request, dropping: ", err)
 			continue
 		}
 		devices = append(devices, kk)
