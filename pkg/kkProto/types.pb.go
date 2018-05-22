@@ -98,6 +98,7 @@ It has these top-level messages:
 	DebugLinkStop
 	DebugLinkLog
 	DebugLinkFillConfig
+	DebugLinkScreenDump
 */
 package kkProto
 

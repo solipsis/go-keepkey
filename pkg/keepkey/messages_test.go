@@ -10,6 +10,7 @@ import (
 
 // Device to connect to for testing
 var kk *Keepkey
+var kks []*Keepkey
 
 // Ethereum root node path
 var ethPath = []uint32{0x8000002C, 0x8000003C, 0x80000000, 0x00000000, 0x00000000}
@@ -17,10 +18,12 @@ var ethPath = []uint32{0x8000002C, 0x8000003C, 0x80000000, 0x00000000, 0x0000000
 // Initialization
 func TestMain(m *testing.M) {
 	// Connect to the first connected keepkey then run tests
-	kks, err := GetDevices(&KeepkeyConfig{})
+	var err error
+	kks, err = GetDevices(&KeepkeyConfig{AutoButton: true})
 	if err != nil {
 		log.Fatal("No keepkey detected")
 	}
+
 	kk = kks[0]
 	os.Exit(m.Run())
 }

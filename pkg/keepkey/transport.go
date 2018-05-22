@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	drawille "github.com/exrook/drawille-go"
 	"github.com/golang/protobuf/proto"
 	"github.com/karalabe/hid"
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
@@ -29,6 +30,12 @@ type Keepkey struct {
 	vendorID      uint16
 	productID     uint16
 	logger
+	deviceQueue, debugQueue chan *deviceResponse
+}
+
+type deviceResponse struct {
+	reply []byte
+	kind  uint16
 }
 
 // KeepkeyConfig specifies various attributes that can be set on a Keepkey connection such as
@@ -52,6 +59,8 @@ func newKeepkeyFromConfig(cfg *KeepkeyConfig) *Keepkey {
 	kk := newKeepkey()
 	kk.logger = cfg.Logger
 	kk.autoButton = cfg.AutoButton
+	kk.deviceQueue = make(chan *deviceResponse, 1) //TODO: buffered or unbuffered
+	kk.debugQueue = make(chan *deviceResponse, 1)
 
 	return kk
 }
@@ -76,6 +85,13 @@ type infoPair struct {
 	device, debug hid.DeviceInfo
 }
 
+// HID INTERFACE DESCRIPTORS
+const (
+	HID_DEVICE = "0"
+	HID_DEBUG  = "1"
+	HID_U2F    = "2"
+)
+
 // discoverKeepkeys searches advertised hid interfaces for devices
 // that appear to be keepkeys
 func discoverKeepkeys() map[string]*infoPair {
@@ -95,9 +111,9 @@ func discoverKeepkeys() map[string]*infoPair {
 			}
 
 			// seperate connection to debug interface if debug link is enabled
-			if strings.HasSuffix(info.Path, "1") {
+			if strings.HasSuffix(info.Path, HID_DEBUG) {
 				deviceMap[pathKey].debug = info
-			} else {
+			} else if strings.HasSuffix(info.Path, HID_DEVICE) {
 				deviceMap[pathKey].device = info
 			}
 		}
@@ -126,9 +142,11 @@ func GetDevices(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 		// Open connection to device
 		device, err := deviceInfo.Open()
 		if err != nil {
-			fmt.Printf("Unable to connect to device: %v dropping..., %s", deviceInfo, err)
+			fmt.Printf("Unable to connect to HID: %v dropping..., %s\n", deviceInfo, err)
 			continue
 		}
+		kk.device = device
+		go listenForMessages(device, kk.deviceQueue)
 
 		// debug
 		if debugInfo.Path != "" {
@@ -139,11 +157,12 @@ func GetDevices(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 			}
 			fmt.Println("Debug link established")
 			kk.debug = debug
+			go listenForMessages(debug, kk.debugQueue)
 		}
 
 		// Ping the device and ask for its features
 		if _, err = kk.Initialize(device); err != nil {
-			fmt.Println("Unable to contact device, dropping: ", err)
+			fmt.Println("Device failed to respond to initial request, dropping: ", err)
 			continue
 		}
 		devices = append(devices, kk)
@@ -153,7 +172,53 @@ func GetDevices(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 	}
 
 	fmt.Println("Connected to ", len(devices), "keepkeys")
+	go dumpScreen() // TODO: Find better spot to toggle listening
 	return devices, nil
+}
+
+// passively listen for messages on a hid interface
+func listenForMessages(in io.Reader, out chan *deviceResponse) {
+	for {
+		// stream the reply back in 64 byte chunks
+		chunk := make([]byte, 64)
+		var reply []byte
+		var kind uint16
+		for {
+			// Read next chunk
+			if _, err := io.ReadFull(in, chunk); err != nil {
+				fmt.Println("Unable to read chunk from device:", err) // TODO: move to device specific log
+				break
+			}
+
+			//TODO: check transport header
+
+			//if it is the first chunk, retreive the reply message type and total message length
+			var payload []byte
+
+			if len(reply) == 0 {
+				kind = binary.BigEndian.Uint16(chunk[3:5])
+				reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
+				payload = chunk[9:]
+			} else {
+				payload = chunk[1:]
+			}
+			// Append to the reply and stop when filled up
+			if left := cap(reply) - len(reply); left > len(payload) {
+				reply = append(reply, payload...)
+			} else {
+				reply = append(reply, payload[:left]...)
+				break
+			}
+		}
+
+		// TODO: refactor this. Don't send response if it is a screen dump
+		if kind == uint16(kkProto.MessageType_MessageType_DebugLinkScreenDump) {
+			screenData <- reply
+			continue
+		}
+
+		out <- &deviceResponse{reply, kind}
+	}
 }
 
 // convert message to indented json output
@@ -216,37 +281,15 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		return 0, nil
 	}
 
-	// stream the reply back in 64 byte chunks
-	var (
-		kind  uint16
-		reply []byte
-	)
-	for {
-		// Read next chunk
-		if _, err := io.ReadFull(device, chunk); err != nil {
-			return 0, err
-		}
-
-		//TODO: check transport header
-
-		//if it is the first chunk, retreive the reply message type and total message length
-		var payload []byte
-
-		if len(reply) == 0 {
-			kind = binary.BigEndian.Uint16(chunk[3:5])
-			reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
-			payload = chunk[9:]
-		} else {
-			payload = chunk[1:]
-		}
-		// Append to the reply and stop when filled up
-		if left := cap(reply) - len(reply); left > len(payload) {
-			reply = append(reply, payload...)
-		} else {
-			reply = append(reply, payload[:left]...)
-			break
-		}
+	// Read from the proper message queue
+	var response *deviceResponse
+	if debug {
+		response = <-kk.debugQueue
+	} else {
+		response = <-kk.deviceQueue
 	}
+	kind := response.kind
+	reply := response.reply
 
 	// Try to parse the reply into the requested reply message
 	if kind == uint16(kkProto.MessageType_MessageType_Failure) {
@@ -304,6 +347,37 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		expected[i] = kkProto.Name(kkProto.Type(res))
 	}
 	return 0, fmt.Errorf("keepkey: expected reply types %s, got %s", expected, kkProto.Name(kind))
+}
+
+// hold partial screen buffers as the screen state is too large to send in a single payload
+var screenBuf []byte
+var screenData = make(chan []byte, 2)
+
+// display ascii versions of the keepkey display screen
+// TODO: Does not work when connected with multiple keepkeys in parallel. Use map of partial buffers?
+func dumpScreen() {
+	for {
+		data := <-screenData
+		dump := new(kkProto.DebugLinkScreenDump)
+		err := proto.Unmarshal(data, dump)
+		if err != nil {
+			fmt.Println("Can't read screen dump")
+			continue
+		}
+
+		sc := dump.GetScreen()
+		s := drawille.NewCanvas()
+		for x := 0; x < 256; x++ {
+			for y := 0; y < 32; y++ {
+				if sc[x+(y*256)] > 0 {
+					s.Set(x, y)
+				}
+			}
+		}
+		fmt.Println(s)
+		s.Clear()
+		continue
+	}
 }
 
 // Is the message one we need to send over the debug HID interface
