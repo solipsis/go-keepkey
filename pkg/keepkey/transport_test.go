@@ -12,7 +12,18 @@ func TestMultiplexingKeepkeys(t *testing.T) {
 		wg.Add(1)
 		go func(kk *Keepkey) {
 			defer wg.Done()
-			_, err := kk.Ping("Ripple", true, false, false)
+			err := kk.WipeDevice()
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			err = kk.LoadDevice([]string{"zoo", "zoo", "zoo", "zoo", "zoo", "zoo", "zoo", "zoo", "zoo", "zoo", "zoo", "wrong"}, "", "label", false, false)
+			if err != nil {
+
+				fmt.Println(err)
+				return
+			}
+			_, err = kk.Ping("Ripple", true, false, false)
 			if err != nil {
 				fmt.Println(err)
 				return

@@ -65,88 +65,6 @@ func newKeepkeyFromConfig(cfg *KeepkeyConfig) *Keepkey {
 	return kk
 }
 
-var screenBuf []byte
-
-func listenForMessages(in io.Reader, out chan *deviceResponse) {
-	for {
-		// stream the reply back in 64 byte chunks
-		chunk := make([]byte, 64)
-		var reply []byte
-		var kind uint16
-		for {
-			// Read next chunk
-			if _, err := io.ReadFull(in, chunk); err != nil {
-				fmt.Println("Unable to read chunk from device:", err) // TODO: move to device specific log
-				break
-			}
-
-			//TODO: check transport header
-
-			//if it is the first chunk, retreive the reply message type and total message length
-			var payload []byte
-
-			if len(reply) == 0 {
-				kind = binary.BigEndian.Uint16(chunk[3:5])
-				reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
-				payload = chunk[9:]
-			} else {
-				payload = chunk[1:]
-			}
-			// Append to the reply and stop when filled up
-			if left := cap(reply) - len(reply); left > len(payload) {
-				reply = append(reply, payload...)
-			} else {
-				reply = append(reply, payload[:left]...)
-				break
-			}
-		}
-
-		if kkProto.Name(kind) == "MessageType_DebugLinkScreenDump" {
-			dump := new(kkProto.DebugLinkScreenDump)
-			err := proto.Unmarshal(reply, dump)
-			if err != nil {
-				fmt.Println("Can't read screen dump")
-				continue
-			}
-
-			sc := dump.GetScreen()
-			screenBuf = append(screenBuf, sc...)
-			if len(screenBuf) >= 16384 {
-				d := drawille.NewCanvas()
-				for x := 0; x < 256; x++ {
-					for y := 0; y < 64; y++ {
-						if screenBuf[x+(y*256)] > 0 {
-							d.Set(x, y)
-						}
-					}
-				}
-				fmt.Println(d)
-				d.Clear()
-				screenBuf = make([]byte, 0)
-			}
-			continue
-
-			//fmt.Println("Screen:", dump.GetScreen())
-			/*
-				sc := dump.GetScreen()
-				s := drawille.NewCanvas()
-				for x := 0; x < 256; x++ {
-					for y := 0; y < 32; y++ {
-						if sc[x+(y*256)] > 0 {
-							s.Set(x, y)
-						}
-					}
-				}
-				fmt.Println(s)
-				s.Clear()
-				continue
-			*/
-
-		}
-		out <- &deviceResponse{reply, kind}
-	}
-}
-
 type logger interface {
 	Printf(string, ...interface{})
 }
@@ -167,6 +85,13 @@ type infoPair struct {
 	device, debug hid.DeviceInfo
 }
 
+// HID INTERFACE DESCRIPTORS
+const (
+	HID_DEVICE = "0"
+	HID_DEBUG  = "1"
+	HID_U2F    = "2"
+)
+
 // discoverKeepkeys searches advertised hid interfaces for devices
 // that appear to be keepkeys
 func discoverKeepkeys() map[string]*infoPair {
@@ -186,9 +111,9 @@ func discoverKeepkeys() map[string]*infoPair {
 			}
 
 			// seperate connection to debug interface if debug link is enabled
-			if strings.HasSuffix(info.Path, "1") {
+			if strings.HasSuffix(info.Path, HID_DEBUG) {
 				deviceMap[pathKey].debug = info
-			} else {
+			} else if strings.HasSuffix(info.Path, HID_DEVICE) {
 				deviceMap[pathKey].device = info
 			}
 		}
@@ -247,7 +172,53 @@ func GetDevices(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 	}
 
 	fmt.Println("Connected to ", len(devices), "keepkeys")
+	go dumpScreen() // TODO: Find better spot to toggle listening
 	return devices, nil
+}
+
+// passively listen for messages on a hid interface
+func listenForMessages(in io.Reader, out chan *deviceResponse) {
+	for {
+		// stream the reply back in 64 byte chunks
+		chunk := make([]byte, 64)
+		var reply []byte
+		var kind uint16
+		for {
+			// Read next chunk
+			if _, err := io.ReadFull(in, chunk); err != nil {
+				fmt.Println("Unable to read chunk from device:", err) // TODO: move to device specific log
+				break
+			}
+
+			//TODO: check transport header
+
+			//if it is the first chunk, retreive the reply message type and total message length
+			var payload []byte
+
+			if len(reply) == 0 {
+				kind = binary.BigEndian.Uint16(chunk[3:5])
+				reply = make([]byte, 0, int(binary.BigEndian.Uint32(chunk[5:9])))
+				payload = chunk[9:]
+			} else {
+				payload = chunk[1:]
+			}
+			// Append to the reply and stop when filled up
+			if left := cap(reply) - len(reply); left > len(payload) {
+				reply = append(reply, payload...)
+			} else {
+				reply = append(reply, payload[:left]...)
+				break
+			}
+		}
+
+		// TODO: refactor this. Don't send response if it is a screen dump
+		if kind == uint16(kkProto.MessageType_MessageType_DebugLinkScreenDump) {
+			screenData <- reply
+			continue
+		}
+
+		out <- &deviceResponse{reply, kind}
+	}
 }
 
 // convert message to indented json output
@@ -289,7 +260,6 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	chunk := make([]byte, 64)
 	chunk[0] = 0x3f // HID Magic number???
 
-	pSize := len(payload)
 	for len(payload) > 0 {
 		// create the message to stream and pad with zeroes if necessary
 		if len(payload) > 63 {
@@ -304,7 +274,6 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		if _, err := device.Write(chunk); err != nil {
 			return 0, err
 		}
-		progress(pSize-len(payload), pSize)
 	}
 
 	// don't wait for response if sending debug buttonPress
@@ -380,6 +349,37 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	return 0, fmt.Errorf("keepkey: expected reply types %s, got %s", expected, kkProto.Name(kind))
 }
 
+// hold partial screen buffers as the screen state is too large to send in a single payload
+var screenBuf []byte
+var screenData = make(chan []byte, 2)
+
+// display ascii versions of the keepkey display screen
+// TODO: Does not work when connected with multiple keepkeys in parallel. Use map of partial buffers?
+func dumpScreen() {
+	for {
+		data := <-screenData
+		dump := new(kkProto.DebugLinkScreenDump)
+		err := proto.Unmarshal(data, dump)
+		if err != nil {
+			fmt.Println("Can't read screen dump")
+			continue
+		}
+
+		sc := dump.GetScreen()
+		s := drawille.NewCanvas()
+		for x := 0; x < 256; x++ {
+			for y := 0; y < 32; y++ {
+				if sc[x+(y*256)] > 0 {
+					s.Set(x, y)
+				}
+			}
+		}
+		fmt.Println(s)
+		s.Clear()
+		continue
+	}
+}
+
 // Is the message one we need to send over the debug HID interface
 func isDebugMessage(req interface{}) bool {
 	switch req.(type) {
@@ -397,14 +397,4 @@ func (kk *Keepkey) Close() {
 	}
 	kk.device.Close()
 	kk.device = nil
-}
-
-// TODO; Hella not threadsafe
-func progress(cur, tot int) {
-	ticks := 50
-	str := "[" + strings.Repeat("*", ticks*cur/tot) + strings.Repeat(" ", ticks-(ticks*cur/tot)) + "]"
-	fmt.Printf("\r%s", str)
-	//fmt.Printf("[")
-	//fmt.Printf("
-
 }
