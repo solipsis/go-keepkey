@@ -22,23 +22,32 @@ Available Commands:
     clearSession    Clear session data such as the pin session and passphrase
     decryptKeyValue Decrypt a value with a given key and nodepath
     encryptKeyValue Encrypt a value with a given key and nodepath
+    flashDump       dump certain section of flash
+    flashHash       Request hash of certain segment of flash memory
+    flashWrite      Write data over flash sectors
     getAddress      Get an address for a coinType and nodePath
     getEntropy      Request sample data from the hardware RNG
     getEthAddress   Get the ethereum address for a given node path
     getFeatures     Ask the device for features and model information
+    getPublicKey    Get a public key for a nodePath including the XPUB
     help            Help about any command
     loadDevice      Load the device from seed words
     ping            Ping the device with a message
     recoverDevice   Begin interactive device recovery
     removePin       Disable pin on the device
     resetDevice     Reset the device and generate a new seed using device RNG
+    signEthTx       Sign an ethereum transaction
+    signMessage     Sign a message using a given node path and coin
+    softReset       Soft reset / power cycle the device. Only works on devices in manufacturer mode
     uploadFirmware  Upload a new firmware binary to the device
+    verifyMessage   Verify a signed message
     wipeDevice      Erase all sensitive information on the device
 
 Flags:
-  -h, --help   help for go-keepkey
-
- ``` 
+      --autoButton   Automatic button pressing if debug link is enabled (default true)
+      --debug        Debug level logging
+  -h, --help         help for go-keepkey
+``` 
 
 ## Usage ##
 
