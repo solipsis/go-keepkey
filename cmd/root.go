@@ -64,7 +64,7 @@ func connectDevice() {
 		logger = log.New(os.Stdout, "Log: ", 0)
 	}
 
-	kks, err := keepkey.GetDevices(&keepkey.KeepkeyConfig{Logger: logger, AutoButton: debugButtonPress})
+	kks, err := keepkey.GetDevicesWithConfig(&keepkey.KeepkeyConfig{Logger: logger, AutoButton: debugButtonPress})
 	if err != nil {
 		log.Fatal(err)
 	}

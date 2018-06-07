@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -124,8 +125,15 @@ func discoverKeepkeys() map[string]*infoPair {
 
 // GetDevices establishes connections to all available KeepKey devices and
 // their debug interfaces if that is enabled in the firmware
+// using the default configuration paramaters
+func GetDevices() ([]*Keepkey, error) {
+	return GetDevicesWithConfig(&KeepkeyConfig{Logger: log.New(ioutil.Discard, "", 0), AutoButton: true})
+}
+
+// GetDevices establishes connections to all available KeepKey devices and
+// their debug interfaces if that is enabled in the firmware
 // the provided config is applied to all found keepkeys
-func GetDevices(cfg *KeepkeyConfig) ([]*Keepkey, error) {
+func GetDevicesWithConfig(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 
 	// Open HID connections to all devices found in the previous step
 	var deviceInfo, debugInfo hid.DeviceInfo
@@ -383,7 +391,7 @@ func dumpScreen() {
 // Is the message one we need to send over the debug HID interface
 func isDebugMessage(req interface{}) bool {
 	switch req.(type) {
-	case *kkProto.DebugLinkDecision, *kkProto.DebugLinkFillConfig, *kkProto.DebugLinkGetState, *kkProto.DebugLinkFlashDump:
+	case *kkProto.DebugLinkDecision, *kkProto.DebugLinkFillConfig, *kkProto.DebugLinkGetState:
 		return true
 	}
 	return false
