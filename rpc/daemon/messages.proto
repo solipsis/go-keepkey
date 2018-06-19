@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package solipsis.gkk.daemon;
+option go_package = "daemon";
+
+// TESTTTT SERWER DOCS
+service Daemon {
+
+	// TEST mTeod interface docs
+	rpc Ping(PingParams) returns (PingResponse);
+}
+
+// Test documenattion
+message PingParams {
+	string msg = 1;
+	bool display = 2;
+	bool pin = 3;
+	bool passphrase = 4;
+}
+
+// TEst repsopnse stuff
+message PingResponse {
+	string response = 1;
+}
+
+
