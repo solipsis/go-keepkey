@@ -19,7 +19,7 @@ var ethPath = []uint32{0x8000002C, 0x8000003C, 0x80000000, 0x00000000, 0x0000000
 func TestMain(m *testing.M) {
 	// Connect to the first connected keepkey then run tests
 	var err error
-	kks, err = GetDevicesWithConfig(&KeepkeyConfig{AutoButton: true})
+	kks, err = GetDevicesWithConfig(&KeepkeyConfig{AutoButton: true, Logger: log.New(os.Stdout, "DEBUG:", 0)})
 	if err != nil {
 		log.Fatal("No keepkey detected")
 	}

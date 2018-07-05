@@ -238,6 +238,11 @@ func pretty(m proto.Message) string {
 	return string(buf)
 }
 
+// TODO: FIX THIS AND REMOVE
+func (kk *Keepkey) KeepkeyExchange(req proto.Message, results ...proto.Message) (int, error) {
+	return kk.keepkeyExchange(req, results...)
+}
+
 // keepkeyExchange sends a request to the device and streams back the results
 // if multiple results are possible the index of the result message is also returned
 // based on trezorExchange()
@@ -312,15 +317,17 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 
 	// Automatically handle Button/Pin/Passphrase requests
 	// handle button requests and forward the results
-	if kind == uint16(kkProto.MessageType_MessageType_ButtonRequest) {
-		promptButton()
-		if kk.autoButton && kk.debug != nil {
-			t := true
-			fmt.Println("sending debug press")
-			kk.keepkeyExchange(&kkProto.DebugLinkDecision{YesNo: &t}, &kkProto.Success{})
+	/*
+		if kind == uint16(kkProto.MessageType_MessageType_ButtonRequest) {
+			promptButton()
+			if kk.autoButton && kk.debug != nil {
+				t := true
+				fmt.Println("sending debug press")
+				kk.keepkeyExchange(&kkProto.DebugLinkDecision{YesNo: &t}, &kkProto.Success{})
+			}
+			return kk.keepkeyExchange(&kkProto.ButtonAck{}, results...)
 		}
-		return kk.keepkeyExchange(&kkProto.ButtonAck{}, results...)
-	}
+	*/
 	// handle pin matrix requests and forward the results
 	if kind == uint16(kkProto.MessageType_MessageType_PinMatrixRequest) {
 		pin, err := promptPin()

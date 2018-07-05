@@ -18,7 +18,44 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-// Test documenattion
+type PingRequest struct {
+	Params               *PingParams `protobuf:"bytes,1,opt,name=params,proto3" json:"params,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *PingRequest) Reset()         { *m = PingRequest{} }
+func (m *PingRequest) String() string { return proto.CompactTextString(m) }
+func (*PingRequest) ProtoMessage()    {}
+func (*PingRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_b0b45afe6c5f894a, []int{0}
+}
+func (m *PingRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PingRequest.Unmarshal(m, b)
+}
+func (m *PingRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PingRequest.Marshal(b, m, deterministic)
+}
+func (dst *PingRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PingRequest.Merge(dst, src)
+}
+func (m *PingRequest) XXX_Size() int {
+	return xxx_messageInfo_PingRequest.Size(m)
+}
+func (m *PingRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_PingRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PingRequest proto.InternalMessageInfo
+
+func (m *PingRequest) GetParams() *PingParams {
+	if m != nil {
+		return m.Params
+	}
+	return nil
+}
+
 type PingParams struct {
 	Msg                  string   `protobuf:"bytes,1,opt,name=msg,proto3" json:"msg,omitempty"`
 	Display              bool     `protobuf:"varint,2,opt,name=display,proto3" json:"display,omitempty"`
@@ -33,7 +70,7 @@ func (m *PingParams) Reset()         { *m = PingParams{} }
 func (m *PingParams) String() string { return proto.CompactTextString(m) }
 func (*PingParams) ProtoMessage()    {}
 func (*PingParams) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e2ae39757c0e93bc, []int{0}
+	return fileDescriptor_messages_b0b45afe6c5f894a, []int{1}
 }
 func (m *PingParams) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PingParams.Unmarshal(m, b)
@@ -81,19 +118,21 @@ func (m *PingParams) GetPassphrase() bool {
 	return false
 }
 
-// TEst repsopnse stuff
+// Pinging the device will result in either the ping message being returned
+// or a request for aditional authorization (Button, Pin, Passphrase)
 type PingResponse struct {
-	Response             string   `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Response             string       `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	AuthRequest          *AuthRequest `protobuf:"bytes,2,opt,name=auth_request,json=authRequest,proto3" json:"auth_request,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
 }
 
 func (m *PingResponse) Reset()         { *m = PingResponse{} }
 func (m *PingResponse) String() string { return proto.CompactTextString(m) }
 func (*PingResponse) ProtoMessage()    {}
 func (*PingResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_e2ae39757c0e93bc, []int{1}
+	return fileDescriptor_messages_b0b45afe6c5f894a, []int{2}
 }
 func (m *PingResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PingResponse.Unmarshal(m, b)
@@ -120,27 +159,364 @@ func (m *PingResponse) GetResponse() string {
 	return ""
 }
 
-func init() {
-	proto.RegisterType((*PingParams)(nil), "solipsis.gkk.daemon.PingParams")
-	proto.RegisterType((*PingResponse)(nil), "solipsis.gkk.daemon.PingResponse")
+func (m *PingResponse) GetAuthRequest() *AuthRequest {
+	if m != nil {
+		return m.AuthRequest
+	}
+	return nil
 }
 
-func init() { proto.RegisterFile("rpc/daemon/messages.proto", fileDescriptor_messages_e2ae39757c0e93bc) }
+// The device is requesting some form of additional authorization from the users
+// This includes [ButtonRequest], [PinRequest], and [PassphraseRequest]
+type AuthRequest struct {
+	Button               *ButtonRequest     `protobuf:"bytes,1,opt,name=button,proto3" json:"button,omitempty"`
+	Pin                  *PinRequest        `protobuf:"bytes,2,opt,name=pin,proto3" json:"pin,omitempty"`
+	Pass                 *PassphraseRequest `protobuf:"bytes,3,opt,name=pass,proto3" json:"pass,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
+}
 
-var fileDescriptor_messages_e2ae39757c0e93bc = []byte{
-	// 209 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x90, 0x31, 0x4f, 0x87, 0x30,
-	0x14, 0xc4, 0x83, 0x10, 0xc4, 0x17, 0x07, 0x53, 0x97, 0xca, 0xa0, 0xc8, 0x44, 0x1c, 0x4a, 0xa2,
-	0xdf, 0xc0, 0x38, 0x39, 0x11, 0xe2, 0xe4, 0x56, 0xa5, 0xa9, 0x15, 0xda, 0xbe, 0xf4, 0xb9, 0xf8,
-	0xed, 0x4d, 0x0b, 0xa8, 0xc3, 0xff, 0xbf, 0xdd, 0x5d, 0xaf, 0xb9, 0x5f, 0x1e, 0x5c, 0x05, 0x7c,
-	0xef, 0x27, 0xa9, 0xac, 0x77, 0xbd, 0x55, 0x44, 0x52, 0x2b, 0x12, 0x18, 0xfc, 0x97, 0x67, 0x97,
-	0xe4, 0x17, 0x83, 0x64, 0x48, 0xe8, 0x79, 0x16, 0x6b, 0xa7, 0xfd, 0x04, 0x18, 0x8c, 0xd3, 0x83,
-	0x0c, 0xd2, 0x12, 0xbb, 0x80, 0xdc, 0x92, 0xe6, 0x59, 0x93, 0x75, 0x67, 0x63, 0x94, 0x8c, 0xc3,
-	0xe9, 0x64, 0x08, 0x17, 0xf9, 0xcd, 0x4f, 0x9a, 0xac, 0xab, 0xc6, 0xdd, 0xc6, 0x2e, 0x1a, 0xc7,
-	0xf3, 0x94, 0x46, 0xc9, 0xae, 0x01, 0x50, 0x12, 0xe1, 0x47, 0x90, 0xa4, 0x78, 0x91, 0x1e, 0xfe,
-	0x25, 0xed, 0x1d, 0x9c, 0xc7, 0xad, 0x51, 0x11, 0x7a, 0x47, 0x8a, 0xd5, 0x50, 0x85, 0x4d, 0x6f,
-	0x93, 0xbf, 0xfe, 0xfe, 0x05, 0xca, 0xa7, 0x44, 0xc8, 0x9e, 0xa1, 0x88, 0xbf, 0xd8, 0x8d, 0x38,
-	0xc0, 0x2f, 0xfe, 0xe0, 0xeb, 0xdb, 0xa3, 0x85, 0x7d, 0xf1, 0xb1, 0x7a, 0x2d, 0xd7, 0xf8, 0xad,
-	0x4c, 0x37, 0x79, 0xf8, 0x09, 0x00, 0x00, 0xff, 0xff, 0xe1, 0x29, 0x89, 0x9e, 0x30, 0x01, 0x00,
-	0x00,
+func (m *AuthRequest) Reset()         { *m = AuthRequest{} }
+func (m *AuthRequest) String() string { return proto.CompactTextString(m) }
+func (*AuthRequest) ProtoMessage()    {}
+func (*AuthRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_b0b45afe6c5f894a, []int{3}
+}
+func (m *AuthRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AuthRequest.Unmarshal(m, b)
+}
+func (m *AuthRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AuthRequest.Marshal(b, m, deterministic)
+}
+func (dst *AuthRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AuthRequest.Merge(dst, src)
+}
+func (m *AuthRequest) XXX_Size() int {
+	return xxx_messageInfo_AuthRequest.Size(m)
+}
+func (m *AuthRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_AuthRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AuthRequest proto.InternalMessageInfo
+
+func (m *AuthRequest) GetButton() *ButtonRequest {
+	if m != nil {
+		return m.Button
+	}
+	return nil
+}
+
+func (m *AuthRequest) GetPin() *PinRequest {
+	if m != nil {
+		return m.Pin
+	}
+	return nil
+}
+
+func (m *AuthRequest) GetPass() *PassphraseRequest {
+	if m != nil {
+		return m.Pass
+	}
+	return nil
+}
+
+// The device is waiting for the user to press the button
+type ButtonRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ButtonRequest) Reset()         { *m = ButtonRequest{} }
+func (m *ButtonRequest) String() string { return proto.CompactTextString(m) }
+func (*ButtonRequest) ProtoMessage()    {}
+func (*ButtonRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_b0b45afe6c5f894a, []int{4}
+}
+func (m *ButtonRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ButtonRequest.Unmarshal(m, b)
+}
+func (m *ButtonRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ButtonRequest.Marshal(b, m, deterministic)
+}
+func (dst *ButtonRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ButtonRequest.Merge(dst, src)
+}
+func (m *ButtonRequest) XXX_Size() int {
+	return xxx_messageInfo_ButtonRequest.Size(m)
+}
+func (m *ButtonRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ButtonRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ButtonRequest proto.InternalMessageInfo
+
+// The device is requesting the pin of the user
+type PinRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PinRequest) Reset()         { *m = PinRequest{} }
+func (m *PinRequest) String() string { return proto.CompactTextString(m) }
+func (*PinRequest) ProtoMessage()    {}
+func (*PinRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_b0b45afe6c5f894a, []int{5}
+}
+func (m *PinRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PinRequest.Unmarshal(m, b)
+}
+func (m *PinRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PinRequest.Marshal(b, m, deterministic)
+}
+func (dst *PinRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PinRequest.Merge(dst, src)
+}
+func (m *PinRequest) XXX_Size() int {
+	return xxx_messageInfo_PinRequest.Size(m)
+}
+func (m *PinRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_PinRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PinRequest proto.InternalMessageInfo
+
+// The device is requesting a BIP32 passphrase
+type PassphraseRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PassphraseRequest) Reset()         { *m = PassphraseRequest{} }
+func (m *PassphraseRequest) String() string { return proto.CompactTextString(m) }
+func (*PassphraseRequest) ProtoMessage()    {}
+func (*PassphraseRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_b0b45afe6c5f894a, []int{6}
+}
+func (m *PassphraseRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PassphraseRequest.Unmarshal(m, b)
+}
+func (m *PassphraseRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PassphraseRequest.Marshal(b, m, deterministic)
+}
+func (dst *PassphraseRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PassphraseRequest.Merge(dst, src)
+}
+func (m *PassphraseRequest) XXX_Size() int {
+	return xxx_messageInfo_PassphraseRequest.Size(m)
+}
+func (m *PassphraseRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_PassphraseRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PassphraseRequest proto.InternalMessageInfo
+
+type AuthResponse struct {
+	Button               *ButtonResponse     `protobuf:"bytes,1,opt,name=button,proto3" json:"button,omitempty"`
+	Pin                  *PinResponse        `protobuf:"bytes,2,opt,name=pin,proto3" json:"pin,omitempty"`
+	Pass                 *PassphraseResponse `protobuf:"bytes,3,opt,name=pass,proto3" json:"pass,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
+}
+
+func (m *AuthResponse) Reset()         { *m = AuthResponse{} }
+func (m *AuthResponse) String() string { return proto.CompactTextString(m) }
+func (*AuthResponse) ProtoMessage()    {}
+func (*AuthResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_b0b45afe6c5f894a, []int{7}
+}
+func (m *AuthResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AuthResponse.Unmarshal(m, b)
+}
+func (m *AuthResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AuthResponse.Marshal(b, m, deterministic)
+}
+func (dst *AuthResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AuthResponse.Merge(dst, src)
+}
+func (m *AuthResponse) XXX_Size() int {
+	return xxx_messageInfo_AuthResponse.Size(m)
+}
+func (m *AuthResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_AuthResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AuthResponse proto.InternalMessageInfo
+
+func (m *AuthResponse) GetButton() *ButtonResponse {
+	if m != nil {
+		return m.Button
+	}
+	return nil
+}
+
+func (m *AuthResponse) GetPin() *PinResponse {
+	if m != nil {
+		return m.Pin
+	}
+	return nil
+}
+
+func (m *AuthResponse) GetPass() *PassphraseResponse {
+	if m != nil {
+		return m.Pass
+	}
+	return nil
+}
+
+type ButtonResponse struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ButtonResponse) Reset()         { *m = ButtonResponse{} }
+func (m *ButtonResponse) String() string { return proto.CompactTextString(m) }
+func (*ButtonResponse) ProtoMessage()    {}
+func (*ButtonResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_b0b45afe6c5f894a, []int{8}
+}
+func (m *ButtonResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ButtonResponse.Unmarshal(m, b)
+}
+func (m *ButtonResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ButtonResponse.Marshal(b, m, deterministic)
+}
+func (dst *ButtonResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ButtonResponse.Merge(dst, src)
+}
+func (m *ButtonResponse) XXX_Size() int {
+	return xxx_messageInfo_ButtonResponse.Size(m)
+}
+func (m *ButtonResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ButtonResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ButtonResponse proto.InternalMessageInfo
+
+type PinResponse struct {
+	Pin                  string   `protobuf:"bytes,1,opt,name=pin,proto3" json:"pin,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PinResponse) Reset()         { *m = PinResponse{} }
+func (m *PinResponse) String() string { return proto.CompactTextString(m) }
+func (*PinResponse) ProtoMessage()    {}
+func (*PinResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_b0b45afe6c5f894a, []int{9}
+}
+func (m *PinResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PinResponse.Unmarshal(m, b)
+}
+func (m *PinResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PinResponse.Marshal(b, m, deterministic)
+}
+func (dst *PinResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PinResponse.Merge(dst, src)
+}
+func (m *PinResponse) XXX_Size() int {
+	return xxx_messageInfo_PinResponse.Size(m)
+}
+func (m *PinResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_PinResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PinResponse proto.InternalMessageInfo
+
+func (m *PinResponse) GetPin() string {
+	if m != nil {
+		return m.Pin
+	}
+	return ""
+}
+
+type PassphraseResponse struct {
+	Passphrase           string   `protobuf:"bytes,1,opt,name=passphrase,proto3" json:"passphrase,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PassphraseResponse) Reset()         { *m = PassphraseResponse{} }
+func (m *PassphraseResponse) String() string { return proto.CompactTextString(m) }
+func (*PassphraseResponse) ProtoMessage()    {}
+func (*PassphraseResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_b0b45afe6c5f894a, []int{10}
+}
+func (m *PassphraseResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PassphraseResponse.Unmarshal(m, b)
+}
+func (m *PassphraseResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PassphraseResponse.Marshal(b, m, deterministic)
+}
+func (dst *PassphraseResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PassphraseResponse.Merge(dst, src)
+}
+func (m *PassphraseResponse) XXX_Size() int {
+	return xxx_messageInfo_PassphraseResponse.Size(m)
+}
+func (m *PassphraseResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_PassphraseResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PassphraseResponse proto.InternalMessageInfo
+
+func (m *PassphraseResponse) GetPassphrase() string {
+	if m != nil {
+		return m.Passphrase
+	}
+	return ""
+}
+
+func init() {
+	proto.RegisterType((*PingRequest)(nil), "solipsis.gkk.daemon.PingRequest")
+	proto.RegisterType((*PingParams)(nil), "solipsis.gkk.daemon.PingParams")
+	proto.RegisterType((*PingResponse)(nil), "solipsis.gkk.daemon.PingResponse")
+	proto.RegisterType((*AuthRequest)(nil), "solipsis.gkk.daemon.AuthRequest")
+	proto.RegisterType((*ButtonRequest)(nil), "solipsis.gkk.daemon.ButtonRequest")
+	proto.RegisterType((*PinRequest)(nil), "solipsis.gkk.daemon.PinRequest")
+	proto.RegisterType((*PassphraseRequest)(nil), "solipsis.gkk.daemon.PassphraseRequest")
+	proto.RegisterType((*AuthResponse)(nil), "solipsis.gkk.daemon.AuthResponse")
+	proto.RegisterType((*ButtonResponse)(nil), "solipsis.gkk.daemon.ButtonResponse")
+	proto.RegisterType((*PinResponse)(nil), "solipsis.gkk.daemon.PinResponse")
+	proto.RegisterType((*PassphraseResponse)(nil), "solipsis.gkk.daemon.PassphraseResponse")
+}
+
+func init() { proto.RegisterFile("rpc/daemon/messages.proto", fileDescriptor_messages_b0b45afe6c5f894a) }
+
+var fileDescriptor_messages_b0b45afe6c5f894a = []byte{
+	// 408 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x93, 0x41, 0x6f, 0xa2, 0x40,
+	0x14, 0xc7, 0x83, 0x1a, 0xd6, 0x7d, 0xb0, 0xbb, 0xee, 0x78, 0x61, 0x3d, 0xac, 0xec, 0x6c, 0xb2,
+	0xeb, 0x09, 0x53, 0xda, 0xa4, 0x89, 0x9e, 0x6a, 0x9b, 0x5e, 0x7a, 0x31, 0x24, 0xbd, 0xf4, 0xd2,
+	0x8c, 0x95, 0x20, 0x55, 0x60, 0xca, 0x83, 0x43, 0xbf, 0x59, 0x0f, 0xfd, 0x70, 0x0d, 0x33, 0x03,
+	0xa2, 0xa2, 0xbd, 0xcd, 0x7b, 0xbc, 0xff, 0x9b, 0xf7, 0xfb, 0xf3, 0x06, 0x7e, 0xa5, 0xfc, 0x69,
+	0xbc, 0x64, 0x7e, 0x94, 0xc4, 0xe3, 0xc8, 0x47, 0x64, 0x81, 0x8f, 0x0e, 0x4f, 0x93, 0x2c, 0x21,
+	0x7d, 0x4c, 0x36, 0x21, 0xc7, 0x10, 0x9d, 0x60, 0xbd, 0x76, 0x64, 0x0d, 0xbd, 0x05, 0x63, 0x1e,
+	0xc6, 0x81, 0xe7, 0xbf, 0xe4, 0x3e, 0x66, 0xe4, 0x12, 0x74, 0xce, 0x52, 0x16, 0xa1, 0xa5, 0xd9,
+	0xda, 0xc8, 0x70, 0x87, 0x4e, 0x83, 0xc8, 0x29, 0x14, 0x73, 0x51, 0xe6, 0xa9, 0x72, 0xfa, 0x0c,
+	0xb0, 0xcd, 0x92, 0x1e, 0xb4, 0x23, 0x0c, 0x44, 0x8f, 0xaf, 0x5e, 0x71, 0x24, 0x16, 0x7c, 0x59,
+	0x86, 0xc8, 0x37, 0xec, 0xd5, 0x6a, 0xd9, 0xda, 0xa8, 0xeb, 0x95, 0x61, 0x51, 0xcb, 0xc3, 0xd8,
+	0x6a, 0x8b, 0x6c, 0x71, 0x24, 0xbf, 0x01, 0x38, 0x43, 0xe4, 0xab, 0x94, 0xa1, 0x6f, 0x75, 0xc4,
+	0x87, 0x5a, 0x86, 0x26, 0x60, 0xca, 0x99, 0x91, 0x27, 0x31, 0xfa, 0x64, 0x00, 0xdd, 0x54, 0x9d,
+	0xd5, 0x95, 0x55, 0x4c, 0xae, 0xc1, 0x64, 0x79, 0xb6, 0x7a, 0x4c, 0x25, 0xa0, 0xb8, 0xdc, 0x70,
+	0xed, 0x46, 0xac, 0xab, 0x3c, 0x5b, 0x29, 0x23, 0x3c, 0x83, 0x6d, 0x03, 0xfa, 0xa6, 0x81, 0x51,
+	0xfb, 0x48, 0x26, 0xa0, 0x2f, 0xf2, 0x2c, 0x4b, 0x62, 0xe5, 0x12, 0x6d, 0x6c, 0x37, 0x13, 0x25,
+	0x65, 0x43, 0xa5, 0x20, 0x67, 0x12, 0xb7, 0x75, 0xda, 0xde, 0x52, 0x25, 0xfc, 0x98, 0x40, 0xa7,
+	0xa0, 0x17, 0x16, 0x19, 0xee, 0xbf, 0x66, 0x4d, 0x65, 0x4f, 0x29, 0x15, 0x1a, 0xfa, 0x03, 0xbe,
+	0xed, 0xcc, 0x41, 0x4d, 0xf1, 0xa3, 0xca, 0xa8, 0x0f, 0x3f, 0x0f, 0x94, 0xf4, 0x5d, 0x03, 0x53,
+	0xe2, 0x2a, 0x13, 0xa7, 0x7b, 0xbc, 0x7f, 0x4f, 0xf2, 0x4a, 0x51, 0x05, 0xec, 0xd6, 0x81, 0xed,
+	0xe3, 0xc0, 0x4a, 0x26, 0x88, 0xa7, 0x3b, 0xc4, 0xff, 0x3f, 0x25, 0x56, 0x5a, 0x89, 0xdc, 0x83,
+	0xef, 0xbb, 0xa3, 0xd0, 0xa1, 0x58, 0xf2, 0x0a, 0x47, 0x6d, 0x9c, 0xda, 0x4e, 0x1e, 0xc6, 0xf4,
+	0x02, 0xc8, 0x61, 0xbb, 0xbd, 0x3d, 0x94, 0xe5, 0xb5, 0x8c, 0x7b, 0x0f, 0xfa, 0x8d, 0x98, 0x85,
+	0xdc, 0x41, 0xa7, 0xd8, 0x48, 0x72, 0x14, 0xaf, 0x7c, 0x60, 0x83, 0x3f, 0x27, 0x2a, 0xe4, 0xb5,
+	0xb3, 0xee, 0x83, 0x2e, 0xd3, 0x0b, 0x5d, 0x3c, 0xdc, 0xf3, 0x8f, 0x00, 0x00, 0x00, 0xff, 0xff,
+	0xd1, 0x07, 0x81, 0x61, 0xd5, 0x03, 0x00, 0x00,
 }

@@ -38,6 +38,10 @@ class TwirpException(httplib.HTTPException):
         return cls(code, msg, meta)
 
 class DaemonClient(object):
+    """
+    TESTTTT SERWER DOCS
+    """
+
     def __init__(self, server_address):
         """Creates a new client for the Daemon service.
 
@@ -61,16 +65,16 @@ class DaemonClient(object):
 
         return resp.read()
 
-    def ping(self, ping_request):
+    def ping(self, ping_params):
         """
-        Ping the device and optionally dislay a message on the screen
+        TEST mTeod interface docs
         """
 
-        serialize = _sym_db.GetSymbol("solipsis.gkk.daemon.PingRequest").SerializeToString
+        serialize = _sym_db.GetSymbol("solipsis.gkk.daemon.PingParams").SerializeToString
         deserialize = _sym_db.GetSymbol("solipsis.gkk.daemon.PingResponse").FromString
 
         full_method = "/{}/{}".format(self.__service_name, "Ping")
-        body = serialize(ping_request)
+        body = serialize(ping_params)
         resp_str = self.__make_request(body=body, full_method=full_method)
         return deserialize(resp_str)
 

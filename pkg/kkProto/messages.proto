@@ -130,8 +130,9 @@ message Features {
 	optional bool pin_cached = 16;			// is PIN already cached in session?
 	optional bool passphrase_cached = 17;		// is passphrase already cached in session?
 	repeated PolicyType policies = 18;			// policies
-	optional string model = 21;			// device hardware model
+	optional bytes model = 21;			// device hardware model
 	optional string firmware_variant = 22; // Firmware variant
+	optional bytes firmware_hash = 23;
 }
 
 /**

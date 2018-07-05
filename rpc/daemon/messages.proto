@@ -3,24 +3,90 @@ syntax = "proto3";
 package solipsis.gkk.daemon;
 option go_package = "daemon";
 
-// TESTTTT SERWER DOCS
 service Daemon {
 
-	// TEST mTeod interface docs
-	rpc Ping(PingParams) returns (PingResponse);
+	// User interaction and Auth
+	rpc PinResponse(Pin)
+	rpc PassphraseResponse(Pin)
+
+	// Ping the device and optionally dislay a message on the screen
+	rpc Ping(PingRequest) returns (PingResponse);
+
+	rpc ApplyPolicy(ApplyPolicyRequest) returns (ApplyPolicyResponse);
+	rpc ApplySettings(ApplySettingsRequest) returns (ApplySettingsResponse);
+	rpc ChangePin(ChangePinRequest) returns (ChangePinResponse);
+	rpc ClearSession(ClearSessionRequest) returns (ClearSessionResponse);
+	rpc DecryptKeyValue(DecryptKeyValueRequest) returns (DecryptKeyValueResponse);
+	rpc EncryptKeyValue(EncryptKeyValueRequest) returns (EncryptKeyValueResponse);
+	rpc FlashDump(FlashDumpRequest) returns (FlashDumpResponse);
+	rpc FlashHash(FlashHashRequest) returns (FlashHashResponse);
+	rpc FlashWrite(FlashWriteRequest) returns (FlashWriteResponse);
+	rpc GetAddress(GetAddressRequest) returns (GetAddressResponse);
+	rpc GetEntropy(GetEntropyRequest) returns (GetEntropyResponse);
+	rpc GetEthAddress(GetEthAddressRequest) returns (GetEthAddressResponse);
+	rpc GetFeatures(GetFeaturesRequest) returns (GetFeaturesResponse);
+	rpc GetPublicKey(GetPublicKeyRequest) returns (GetPublicKeyResponse);
+	rpc LoadDevice(LoadDeviceRequest) returns (LoadDeviceResponse);
+	rpc RecoverDevice(RecoverDeviceRequest) returns (RecoverDeviceResponse);
+	rpc RemovePin(RemovePinRequest) returns (RemovePinResponse);
+	rpc ResetDevice(ResetDeviceRequest) returns (ResetDeviceResponse);
+	rpc SignEthTx(SignEthTxRequest) returns (SignEthTxResponse);
+	rpc SignMessage(SignMessageRequest) returns (SignMessageResponse);
+	rpc SoftReset(SoftResetRequest) returns (SoftResetResponse);
+	rpc UploadFirmware(UploadFirmwareRequest) returns (UploadFirmwareResponse);
+	rpc VerifyMessage(VerifyMessageRequest) returns (VerifyMessageResponse);
+	rpc WipeDevice(WipeDeviceRequest) returns (WipeDeviceResponse);
+
 }
 
-// Test documenattion
+message PingRequest {
+	PingParams params = 1;
+}
+
 message PingParams {
-	string msg = 1;
-	bool display = 2;
-	bool pin = 3;
-	bool passphrase = 4;
+	string msg = 1; 	// Message to ping the device with
+	bool display = 2; 	// Whether or not to display the message on the screen
+	bool pin = 3; 		// Require the user to input their pin before pinging
+	bool passphrase = 4; 	// Require the user to input a passphrase before pinging
 }
 
-// TEst repsopnse stuff
+// Pinging the device will result in either the ping message being returned 
+// or a request for aditional authorization (Button, Pin, Passphrase)
 message PingResponse {
 	string response = 1;
+	AuthRequest auth_request = 2;
 }
 
+// The device is requesting some form of additional authorization from the users
+// This includes [ButtonRequest], [PinRequest], and [PassphraseRequest]
+message AuthRequest {
+	ButtonRequest button = 1;
+	PinRequest pin = 2;
+	PassphraseRequest pass = 3;
+}
+
+// The device is waiting for the user to press the button
+message ButtonRequest {}
+
+// The device is requesting the pin of the user
+message PinRequest {}
+
+// The device is requesting a BIP32 passphrase
+message PassphraseRequest {}
+
+message AuthResponse {
+	ButtonResponse button = 1;
+	PinResponse pin = 2;
+	PassphraseResponse pass = 3;
+}
+
+message ButtonResponse {}
+
+message PinResponse {
+	string pin = 1;
+}
+
+message PassphraseResponse {
+	string passphrase = 1;
+}
 

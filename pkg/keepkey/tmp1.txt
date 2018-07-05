@@ -1,0 +1,391 @@
+MessageType_Features:
+{
+    "vendor": "keepkey.com",
+    "major_version": 5,
+    "minor_version": 2,
+    "patch_version": 4,
+    "device_id": "12FCE9E8BF9615A0567F5CEB",
+    "pin_protection": false,
+    "passphrase_protection": false,
+    "coins": [
+        {
+            "coin_name": "Bitcoin",
+            "coin_shortcut": "BTC",
+            "address_type": 0,
+            "maxfee_kb": 100000,
+            "address_type_p2sh": 5,
+            "address_type_p2wpkh": 6,
+            "address_type_p2wsh": 10,
+            "signed_message_header": "\u0018Bitcoin Signed Message:\n",
+            "bip44_account_path": 2147483648,
+            "decimals": 8
+        },
+        {
+            "coin_name": "Testnet",
+            "coin_shortcut": "TEST",
+            "address_type": 111,
+            "maxfee_kb": 10000000,
+            "address_type_p2sh": 196,
+            "address_type_p2wpkh": 3,
+            "address_type_p2wsh": 40,
+            "signed_message_header": "\u0018Bitcoin Signed Message:\n",
+            "bip44_account_path": 2147483649,
+            "decimals": 8
+        },
+        {
+            "coin_name": "BitcoinCash",
+            "coin_shortcut": "BCH",
+            "address_type": 0,
+            "maxfee_kb": 500000,
+            "address_type_p2sh": 5,
+            "signed_message_header": "\u0018Bitcoin Signed Message:\n",
+            "bip44_account_path": 2147483793,
+            "forkid": 0,
+            "decimals": 8
+        },
+        {
+            "coin_name": "Namecoin",
+            "coin_shortcut": "NMC",
+            "address_type": 52,
+            "maxfee_kb": 10000000,
+            "address_type_p2sh": 5,
+            "signed_message_header": "\u0019Namecoin Signed Message:\n",
+            "bip44_account_path": 2147483655,
+            "decimals": 8
+        },
+        {
+            "coin_name": "Litecoin",
+            "coin_shortcut": "LTC",
+            "address_type": 48,
+            "maxfee_kb": 1000000,
+            "address_type_p2sh": 5,
+            "signed_message_header": "\u0019Litecoin Signed Message:\n",
+            "bip44_account_path": 2147483650,
+            "decimals": 8
+        },
+        {
+            "coin_name": "Dogecoin",
+            "coin_shortcut": "DOGE",
+            "address_type": 30,
+            "maxfee_kb": 1000000000,
+            "address_type_p2sh": 22,
+            "signed_message_header": "\u0019Dogecoin Signed Message:\n",
+            "bip44_account_path": 2147483651,
+            "decimals": 8
+        },
+        {
+            "coin_name": "Dash",
+            "coin_shortcut": "DASH",
+            "address_type": 76,
+            "maxfee_kb": 100000,
+            "address_type_p2sh": 16,
+            "signed_message_header": "\u0019DarkCoin Signed Message:\n",
+            "bip44_account_path": 2147483653,
+            "decimals": 8
+        },
+        {
+            "coin_name": "Ethereum",
+            "coin_shortcut": "ETH",
+            "address_type": 65535,
+            "maxfee_kb": 100000,
+            "address_type_p2sh": 65535,
+            "signed_message_header": "\u0019Ethereum Signed Message:\n",
+            "bip44_account_path": 2147483708,
+            "decimals": 18
+        },
+        {
+            "coin_name": "Ethereum Classic",
+            "coin_shortcut": "ETC",
+            "address_type": 65535,
+            "maxfee_kb": 100000,
+            "address_type_p2sh": 65535,
+            "signed_message_header": "\u0019Ethereum Signed Message:\n",
+            "bip44_account_path": 2147483709,
+            "decimals": 18
+        },
+        {
+            "coin_name": "Golem",
+            "coin_shortcut": "GNT",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "p0R2RDEZqULeSYWQ/h8kVNfUrA0=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Gnosis",
+            "coin_shortcut": "GNO",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "aBDndogMApM9R9sbn8BZCOU4a5Y=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "SingularDTV",
+            "coin_shortcut": "SNGLS",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 0,
+            "contract_address": "rsLofgojUmbZxa3J3rSy4ptU0Ak=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Iconomi",
+            "coin_shortcut": "ICN",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "iIZmymng8Xje1tdbVybO6ZqH1pg=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "DigixDAO",
+            "coin_shortcut": "DGD",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 9,
+            "contract_address": "4LeSfEryN2XLUTFKDgUhqWRfDio=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Melon",
+            "coin_shortcut": "MLN",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "vrnvUUo3m5l+B5j9zJAe5HS22aE=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Augur",
+            "coin_shortcut": "REP",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "6UMn0H/BeQe023iOWt8u1CSt3/Y=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "SwarmCity",
+            "coin_shortcut": "SWT",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "uef4Vo4I1WWfXSnEmXFz2EzfJgc=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Wings",
+            "coin_shortcut": "WINGS",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "ZnCIshLOPQahtVOnIh4f0ZAA2a8=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "WeTrust",
+            "coin_shortcut": "TRST",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 6,
+            "contract_address": "y5S+bxOhGC5KS2FAy3vyAl0o5Bs=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "iExec",
+            "coin_shortcut": "RLC",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 9,
+            "contract_address": "YH9MW7ZyIw6GcghVMvfpAVRKc3U=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "MatchPool",
+            "coin_shortcut": "GUP",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 3,
+            "contract_address": "97CYKY98afwUYQv3HV4CxgeSiUw=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Aragon",
+            "coin_shortcut": "ANT",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "lgsjagfPEiZjxDAzUGCaZqeyiMA=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "BAT",
+            "coin_shortcut": "BAT",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "DYd19khDBnmnCemNKwy2JQ0oh+8=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Bancor",
+            "coin_shortcut": "BNT",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "H1c9b7PxPWif+ES0zjd5TXmn/xw=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Status",
+            "coin_shortcut": "SNT",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "dE1w/b4rpM+VExYmYUoXY9+AW54=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Numeraire",
+            "coin_shortcut": "NMR",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "F3bh8m+YsaXfnNNHlTom3Ty0ZnE=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Edgeless",
+            "coin_shortcut": "EDG",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 0,
+            "contract_address": "CHEdOwLIdY8vs6tOgCKEGKf445w=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Civic",
+            "coin_shortcut": "CVC",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 8,
+            "contract_address": "QeVWAFSCTqawcy5lbjrWTiDpTkU=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Metal",
+            "coin_shortcut": "MTL",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 8,
+            "contract_address": "9DMIk2aJnYOp8mp3PVnsfs8wNV4=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "TenX",
+            "coin_shortcut": "PAY",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "uXBIYo22tmHUwqqDPpXb4akFsoA=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "FunFair",
+            "coin_shortcut": "FUN",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 8,
+            "contract_address": "QZ0Ni92a9eYGriIy7Sha/xkOcRs=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Qtum",
+            "coin_shortcut": "QTUM",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "mmQtazNo3cZiyiRLrfMs2nFgBbw=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "district0x",
+            "coin_shortcut": "DNT",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "Cr2s5w03kCNa9EjIhUdgO5RWBOo=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "0x",
+            "coin_shortcut": "ZRX",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "5B0kiVcdMiGJJG2vpeveH0aZ9Jg=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "FirstBlood",
+            "coin_shortcut": "1ST",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "rzDSp+kNfcNhyMRYXpu30vbxW8c=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "OmiseGo",
+            "coin_shortcut": "OMG",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "0mEUzW7iiazPgjUMjYSH/tuKDAc=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "SALT",
+            "coin_shortcut": "SALT",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 8,
+            "contract_address": "QVbTNC1cOFqH0mT5BlNzNZIABYE=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Ripio",
+            "coin_shortcut": "RCN",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 18,
+            "contract_address": "+XC4424j9/w/11LuqG+L6NgzdaY=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        },
+        {
+            "coin_name": "Storj",
+            "coin_shortcut": "STORJ",
+            "maxfee_kb": 100000,
+            "bip44_account_path": 2147483708,
+            "decimals": 8,
+            "contract_address": "tk71HIiJcskIz6z1m0fBr7wKuKw=",
+            "gas_limit": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB6Eg="
+        }
+    ],
+    "initialized": false,
+    "revision": "NWExZjgxMTNjN2Q3NzFlNDIwNjkzYTNmNTNmNWU5OThlN2YzYjNhZA==",
+    "bootloader_hash": "expRHTIVlFqWzRUNt6vsj9Y1OGopOqUogi+QL9LISR4=",
+    "imported": false,
+    "pin_cached": false,
+    "passphrase_cached": false,
+    "policies": [
+        {
+            "policy_name": "ShapeShift",
+            "enabled": false
+        }
+    ],
+    "model": "K1-1\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd",
+    "whitelabel_name": "KeepKey"
+}
