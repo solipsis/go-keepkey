@@ -8,7 +8,7 @@ import (
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
 )
 
-type EthSignTxJSON struct {
+type ethSignTxJSON struct {
 	AddressN         []uint32     `json:"address_n"`
 	Nonce            string       `json:"nonce,omitempty"`
 	GasPrice         string       `json:"gas_price,omitempty"`
@@ -24,28 +24,28 @@ type EthSignTxJSON struct {
 	TokenTo          string       `json:"token_to,omitempty"`
 	TokenShortcut    string       `json:"token_shortcut,omitempty"`
 	TypeName         string       `json:"typeName,omitempty"`
-	ExchangeType     ExchangeType `json:"exchange_type,omitempty"`
+	ExchangeType     exchangeType `json:"exchange_type,omitempty"`
 }
 
-type ExchangeAddress struct {
+type exchangeAddress struct {
 	CoinType  string      `json:"coin_type,omitempty"`
 	Address   string      `json:"address,omitempty"`
 	DestTag   interface{} `json:"dest_tag,omitempty"`
 	RsAddress interface{} `json:"rs_address,omitempty"`
 }
 
-type ExchangeType struct {
+type exchangeType struct {
 	SignedExchangeResponse struct {
 		Response   interface{} `json:"response"`
 		Signature  string      `json:"signature"`
 		ResponseV2 struct {
-			DepositAddress    ExchangeAddress `json:"deposit_address"`
+			DepositAddress    exchangeAddress `json:"deposit_address"`
 			DepositAmount     string          `json:"deposit_amount"`
 			Expiration        string          `json:"expiration"`
 			QuotedRate        string          `json:"quoted_rate"`
-			WithdrawalAddress ExchangeAddress `json:"withdrawal_address"`
+			WithdrawalAddress exchangeAddress `json:"withdrawal_address"`
 			WithdrawalAmount  string          `json:"withdrawal_amount"`
-			ReturnAddress     ExchangeAddress `json:"return_address"`
+			ReturnAddress     exchangeAddress `json:"return_address"`
 			APIKey            string          `json:"api_key"`
 			MinerFee          string          `json:"miner_fee"`
 			OrderID           string          `json:"order_id"`
@@ -56,7 +56,7 @@ type ExchangeType struct {
 	ReturnAddressN     []uint32 `json:"return_address_n"`
 }
 
-func exchangeAddressFromJSON(a ExchangeAddress) *kkProto.ExchangeAddress {
+func exchangeAddressFromJSON(a exchangeAddress) *kkProto.ExchangeAddress {
 	return &kkProto.ExchangeAddress{
 		CoinType: &a.CoinType,
 		Address:  &a.Address,
@@ -71,7 +71,7 @@ func mustDecode(s string) []byte {
 	return h
 }
 
-func ethSignProtoFromJSON(e EthSignTxJSON) *kkProto.EthereumSignTx {
+func ethSignProtoFromJSON(e ethSignTxJSON) *kkProto.EthereumSignTx {
 	addrType := kkProto.OutputAddressType(kkProto.OutputAddressType_value[e.AddressType])
 	ret := &kkProto.EthereumSignTx{
 		AddressN: e.AddressN,
@@ -102,7 +102,7 @@ func ethSignProtoFromJSON(e EthSignTxJSON) *kkProto.EthereumSignTx {
 	return ret
 }
 
-func exchangeProtoFromJSON(e ExchangeType) *kkProto.ExchangeType {
+func exchangeProtoFromJSON(e exchangeType) *kkProto.ExchangeType {
 	resp := e.SignedExchangeResponse
 	v2 := resp.ResponseV2
 	exp, _ := strconv.ParseInt(v2.Expiration, 10, 64)
