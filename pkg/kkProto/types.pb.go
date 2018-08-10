@@ -31,6 +31,8 @@ It has these top-level messages:
 	Initialize
 	GetFeatures
 	Features
+	GetCoinTable
+	CoinTable
 	ClearSession
 	ApplySettings
 	ChangePin
@@ -98,7 +100,7 @@ It has these top-level messages:
 	DebugLinkStop
 	DebugLinkLog
 	DebugLinkFillConfig
-	DebugLinkScreenDump
+	DebugLinkInfo
 */
 package kkProto
 
