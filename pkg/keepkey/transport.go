@@ -11,27 +11,27 @@ import (
 	"os"
 	"strings"
 
-	drawille "github.com/exrook/drawille-go"
 	"github.com/golang/protobuf/proto"
 	"github.com/karalabe/hid"
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
 )
 
 const (
-	vendorID  uint16 = 0x2B24
+	vendorID uint16 = 0x2B24
+	//vendorID  uint16 = 0x534c
 	productID uint16 = 0x0001
 )
 
 // Keepkey represents an open HID connection to a keepkey and possibly a
 // connection to the debug link if enabled
 type Keepkey struct {
-	info          hid.DeviceInfo
-	device, debug *hid.Device
-	autoButton    bool // Automatically send button presses. DebugLink must be enabled in the firmware
-	vendorID      uint16
-	productID     uint16
+	info                   hid.DeviceInfo
+	device, debug, infoOut *hid.Device
+	autoButton             bool // Automatically send button presses. DebugLink must be enabled in the firmware
+	vendorID               uint16
+	productID              uint16
 	logger
-	deviceQueue, debugQueue chan *deviceResponse
+	deviceQueue, debugQueue, infoQueue chan *deviceResponse
 }
 
 type deviceResponse struct {
@@ -60,7 +60,7 @@ func newKeepkeyFromConfig(cfg *KeepkeyConfig) *Keepkey {
 	kk := newKeepkey()
 	kk.logger = cfg.Logger
 	kk.autoButton = cfg.AutoButton
-	kk.deviceQueue = make(chan *deviceResponse, 1) //TODO: buffered or unbuffered
+	kk.deviceQueue = make(chan *deviceResponse, 1)
 	kk.debugQueue = make(chan *deviceResponse, 1)
 
 	return kk
@@ -81,25 +81,25 @@ func (kk *Keepkey) SetLogger(l logger) {
 	kk.logger = l
 }
 
-// tuple of keepkey and optionally its debug interface
-type infoPair struct {
-	device, debug hid.DeviceInfo
+// tuple of keepkey and optionally its debug/info interfaces
+type hidInterfaces struct {
+	device, debug, info hid.DeviceInfo
 }
 
 // HID INTERFACE DESCRIPTORS
 const (
 	HID_DEVICE = "0"
 	HID_DEBUG  = "1"
-	HID_U2F    = "2"
+	HID_INFO   = "2"
 )
 
 // discoverKeepkeys searches advertised hid interfaces for devices
 // that appear to be keepkeys
-func discoverKeepkeys() map[string]*infoPair {
+func discoverKeepkeys() map[string]*hidInterfaces {
 
 	// Iterate over all connected keepkeys pairing each one with its
 	// corresponding debug link if enabled
-	deviceMap := make(map[string]*infoPair)
+	deviceMap := make(map[string]*hidInterfaces)
 	for _, info := range hid.Enumerate(vendorID, 0) {
 
 		// TODO: revisit this when keepkey adds additional product id's
@@ -108,14 +108,16 @@ func discoverKeepkeys() map[string]*infoPair {
 			// Use serial string to differentiate between different keepkeys
 			pathKey := info.Serial
 			if deviceMap[pathKey] == nil {
-				deviceMap[pathKey] = new(infoPair)
+				deviceMap[pathKey] = new(hidInterfaces)
 			}
 
-			// seperate connection to debug interface if debug link is enabled
+			// seperate connection to debug/info HID interface if debug link is enabled
 			if strings.HasSuffix(info.Path, HID_DEBUG) {
 				deviceMap[pathKey].debug = info
 			} else if strings.HasSuffix(info.Path, HID_DEVICE) {
 				deviceMap[pathKey].device = info
+			} else if strings.HasSuffix(info.Path, HID_INFO) {
+				deviceMap[pathKey].info = info
 			}
 		}
 	}
@@ -131,41 +133,54 @@ func GetDevices() ([]*Keepkey, error) {
 }
 
 // GetDevices establishes connections to all available KeepKey devices and
-// their debug interfaces if that is enabled in the firmware
+// their enabled HID interfaces (primary/debug/info)
 // the provided config is applied to all found keepkeys
 func GetDevicesWithConfig(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 
 	// Open HID connections to all devices found in the previous step
-	var deviceInfo, debugInfo hid.DeviceInfo
+	var deviceIFace, debugIFace, infoIFace hid.DeviceInfo
 	devices := make([]*Keepkey, 0)
-	for _, pair := range discoverKeepkeys() {
+	for _, IFaces := range discoverKeepkeys() {
 		kk := newKeepkeyFromConfig(cfg)
-		deviceInfo = pair.device
-		debugInfo = pair.debug
+		deviceIFace = IFaces.device
+		debugIFace = IFaces.debug
+		infoIFace = IFaces.info
 
-		if deviceInfo.Path == "" {
+		if deviceIFace.Path == "" {
 			continue
 		}
 
-		// Open connection to device
-		device, err := deviceInfo.Open()
+		// Open connection to device on primary HID interface
+		device, err := deviceIFace.Open()
 		if err != nil {
-			fmt.Printf("Unable to connect to HID: %v dropping..., %s\n", deviceInfo, err)
+			fmt.Printf("Unable to connect to HID: %v dropping..., %s\n", deviceIFace, err)
 			continue
 		}
 		kk.device = device
 		go listenForMessages(device, kk.deviceQueue)
 
-		// debug
-		if debugInfo.Path != "" {
-			debug, err := debugInfo.Open()
+		// debug HID interface
+		if debugIFace.Path != "" {
+			debug, err := debugIFace.Open()
 			if err != nil {
-				fmt.Println("unable to initiate debug link")
+				fmt.Println("unable to initiate debug link, skipping...")
 				continue
 			}
 			fmt.Println("Debug link established")
 			kk.debug = debug
 			go listenForMessages(debug, kk.debugQueue)
+		}
+
+		// info HID interface
+		if infoIFace.Path != "" {
+			info, err := infoIFace.Open()
+			if err != nil {
+				fmt.Println("unable to connect to Info HID interface, skipping...")
+				continue
+			}
+			fmt.Println("Connected to Info HID interface")
+			kk.infoOut = info
+			go listenForMessages(info, kk.infoQueue)
 		}
 
 		// Ping the device and ask for its features
@@ -180,7 +195,6 @@ func GetDevicesWithConfig(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 	}
 
 	fmt.Println("Connected to ", len(devices), "keepkeys")
-	go dumpScreen() // TODO: Find better spot to toggle listening
 	return devices, nil
 }
 
@@ -218,11 +232,15 @@ func listenForMessages(in io.Reader, out chan *deviceResponse) {
 				break
 			}
 		}
-
-		// TODO: refactor this. Don't send response if it is a screen dump
-		if kind == uint16(kkProto.MessageType_MessageType_DebugLinkScreenDump) {
-			screenData <- reply
-			continue
+		// TODO: refactor into handler funclist per hid interface
+		// TODO: gracefully terminate message listeners at program termination
+		if kind == uint16(kkProto.MessageType_MessageType_DebugLinkInfo) {
+			info := new(kkProto.DebugLinkInfo)
+			err := proto.Unmarshal(reply, info)
+			if err != nil {
+				fmt.Println("Unable to parse INFO message")
+			}
+			fmt.Println("INFO: ", info.GetMsg())
 		}
 
 		out <- &deviceResponse{reply, kind}
@@ -361,6 +379,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 var screenBuf []byte
 var screenData = make(chan []byte, 2)
 
+/*
 // display ascii versions of the keepkey display screen
 // TODO: Does not work when connected with multiple keepkeys in parallel. Use map of partial buffers?
 func dumpScreen() {
@@ -387,6 +406,7 @@ func dumpScreen() {
 		continue
 	}
 }
+*/
 
 // Is the message one we need to send over the debug HID interface
 func isDebugMessage(req interface{}) bool {

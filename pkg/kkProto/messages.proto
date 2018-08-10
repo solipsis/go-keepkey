@@ -79,13 +79,15 @@ enum MessageType {
 	MessageType_DebugLinkFlashDump = 87 [(wire_debug_in) = true];
 	MessageType_DebugLinkFlashDumpResponse = 88 [(wire_debug_out) = true];
 	MessageType_SoftReset = 89 [(wire_debug_in) = true];
+	MessageType_DebugLinkInfo = 90 [(wire_debug_out) = true];
 	MessageType_DebugLinkDecision = 100 [(wire_debug_in) = true];
 	MessageType_DebugLinkGetState = 101 [(wire_debug_in) = true];
 	MessageType_DebugLinkState = 102 [(wire_debug_out) = true];
 	MessageType_DebugLinkStop = 103 [(wire_debug_in) = true];
 	MessageType_DebugLinkLog = 104 [(wire_debug_out) = true];
 	MessageType_DebugLinkFillConfig = 105 [(wire_debug_out) = true];
-	MessageType_DebugLinkScreenDump = 106 [(wire_debug_out) = true];
+	MessageType_GetCoinTable = 106 [(wire_in) = true];
+	MessageType_CoinTable = 107 [(wire_out) = true];
 }
 
 ////////////////////
@@ -122,16 +124,36 @@ message Features {
 	optional bool passphrase_protection = 8;	// is node/mnemonic encrypted using passphrase?
 	optional string language = 9;			// device language
 	optional string label = 10;			// device description label
-	repeated CoinType coins = 11;			// supported coins
+	repeated CoinType coins = 11;			// supported coins (Deprecated. Use GetCoinTable instead)
 	optional bool initialized = 12;			// does device contain seed?
 	optional bytes revision = 13;			// SCM revision of firmware
-	optional bytes bootloader_hash = 14;		// hash of the bootloader
+	optional bytes bootloader_hash = 14;		// double sha256 hash of the bootloader
 	optional bool imported = 15;			// was storage imported from an external source?
 	optional bool pin_cached = 16;			// is PIN already cached in session?
 	optional bool passphrase_cached = 17;		// is passphrase already cached in session?
 	repeated PolicyType policies = 18;			// policies
 	optional string model = 21;			// device hardware model
 	optional string firmware_variant = 22; // Firmware variant
+	optional bytes firmware_hash = 23;		// double sha256 hash of the firmware
+}
+
+/**
+ * Request: Ask the device for its list of supported coins
+ * @next CoinTable
+ */
+message GetCoinTable {
+	optional uint32 start = 1;
+	optional uint32 end = 2;
+}
+
+/**
+ * Response: A subset of the supported coins
+ * @prev GetCoinTable
+ */
+message CoinTable {
+	repeated CoinType table = 1;
+	optional uint32 num_coins = 2;
+	optional uint32 chunk_size = 3;
 }
 
 /**
@@ -873,11 +895,8 @@ message DebugLinkFillConfig {
 }
 
 /**
- * Response: Device sending screen state
- */
-message DebugLinkScreenDump {
-	optional bytes screen = 1;
+* Response: Device sending Info logging that should be consumed passively
+*/
+message DebugLinkInfo {
+	optional string msg = 1;
 }
-
-
-
