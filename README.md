@@ -126,3 +126,13 @@ size := 1024 // number of bytes of entropy to request up to 1024 bytes
 entropy, err := kk.GetEntropy(size)
 ```
 
+## Development ##
+
+### Regenerating Protobufs ###
+
+This project uses [retool](https://github.com/twitchtv/retool) to vendor tools such as protoc
+
+	go get github.com/twitchtv/retool
+	
+Once retool is installed you can regenerate the protobufs using (from the project root)
+	retool do go generate ./...
