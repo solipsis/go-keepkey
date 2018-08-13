@@ -12,21 +12,48 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+// A compilation error at this line likely means your copy of the
+// proto package needs to be updated.
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+
 // *
 // Structure representing address for various coin types (BTC, LTC, and etc).
 // @used in ExchangeResponse
 type ExchangeAddress struct {
-	CoinType         *string `protobuf:"bytes,1,opt,name=coin_type,json=coinType" json:"coin_type,omitempty"`
-	Address          *string `protobuf:"bytes,2,opt,name=address" json:"address,omitempty"`
-	DestTag          *string `protobuf:"bytes,3,opt,name=dest_tag,json=destTag" json:"dest_tag,omitempty"`
-	RsAddress        *string `protobuf:"bytes,4,opt,name=rs_address,json=rsAddress" json:"rs_address,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
+	CoinType             *string  `protobuf:"bytes,1,opt,name=coin_type,json=coinType" json:"coin_type,omitempty"`
+	Address              *string  `protobuf:"bytes,2,opt,name=address" json:"address,omitempty"`
+	DestTag              *string  `protobuf:"bytes,3,opt,name=dest_tag,json=destTag" json:"dest_tag,omitempty"`
+	RsAddress            *string  `protobuf:"bytes,4,opt,name=rs_address,json=rsAddress" json:"rs_address,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ExchangeAddress) Reset()                    { *m = ExchangeAddress{} }
-func (m *ExchangeAddress) String() string            { return proto.CompactTextString(m) }
-func (*ExchangeAddress) ProtoMessage()               {}
-func (*ExchangeAddress) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{0} }
+func (m *ExchangeAddress) Reset()         { *m = ExchangeAddress{} }
+func (m *ExchangeAddress) String() string { return proto.CompactTextString(m) }
+func (*ExchangeAddress) ProtoMessage()    {}
+func (*ExchangeAddress) Descriptor() ([]byte, []int) {
+	return fileDescriptor_exchange_4fd234252745ec4e, []int{0}
+}
+func (m *ExchangeAddress) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExchangeAddress.Unmarshal(m, b)
+}
+func (m *ExchangeAddress) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExchangeAddress.Marshal(b, m, deterministic)
+}
+func (dst *ExchangeAddress) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExchangeAddress.Merge(dst, src)
+}
+func (m *ExchangeAddress) XXX_Size() int {
+	return xxx_messageInfo_ExchangeAddress.Size(m)
+}
+func (m *ExchangeAddress) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExchangeAddress.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExchangeAddress proto.InternalMessageInfo
 
 func (m *ExchangeAddress) GetCoinType() string {
 	if m != nil && m.CoinType != nil {
@@ -59,23 +86,44 @@ func (m *ExchangeAddress) GetRsAddress() string {
 // *
 // Structure representing exchange response version 2
 type ExchangeResponseV2 struct {
-	DepositAddress    *ExchangeAddress `protobuf:"bytes,1,opt,name=deposit_address,json=depositAddress" json:"deposit_address,omitempty"`
-	DepositAmount     []byte           `protobuf:"bytes,2,opt,name=deposit_amount,json=depositAmount" json:"deposit_amount,omitempty"`
-	Expiration        *int64           `protobuf:"varint,3,opt,name=expiration" json:"expiration,omitempty"`
-	QuotedRate        []byte           `protobuf:"bytes,4,opt,name=quoted_rate,json=quotedRate" json:"quoted_rate,omitempty"`
-	WithdrawalAddress *ExchangeAddress `protobuf:"bytes,5,opt,name=withdrawal_address,json=withdrawalAddress" json:"withdrawal_address,omitempty"`
-	WithdrawalAmount  []byte           `protobuf:"bytes,6,opt,name=withdrawal_amount,json=withdrawalAmount" json:"withdrawal_amount,omitempty"`
-	ReturnAddress     *ExchangeAddress `protobuf:"bytes,7,opt,name=return_address,json=returnAddress" json:"return_address,omitempty"`
-	ApiKey            []byte           `protobuf:"bytes,8,opt,name=api_key,json=apiKey" json:"api_key,omitempty"`
-	MinerFee          []byte           `protobuf:"bytes,9,opt,name=miner_fee,json=minerFee" json:"miner_fee,omitempty"`
-	OrderId           []byte           `protobuf:"bytes,10,opt,name=order_id,json=orderId" json:"order_id,omitempty"`
-	XXX_unrecognized  []byte           `json:"-"`
+	DepositAddress       *ExchangeAddress `protobuf:"bytes,1,opt,name=deposit_address,json=depositAddress" json:"deposit_address,omitempty"`
+	DepositAmount        []byte           `protobuf:"bytes,2,opt,name=deposit_amount,json=depositAmount" json:"deposit_amount,omitempty"`
+	Expiration           *int64           `protobuf:"varint,3,opt,name=expiration" json:"expiration,omitempty"`
+	QuotedRate           []byte           `protobuf:"bytes,4,opt,name=quoted_rate,json=quotedRate" json:"quoted_rate,omitempty"`
+	WithdrawalAddress    *ExchangeAddress `protobuf:"bytes,5,opt,name=withdrawal_address,json=withdrawalAddress" json:"withdrawal_address,omitempty"`
+	WithdrawalAmount     []byte           `protobuf:"bytes,6,opt,name=withdrawal_amount,json=withdrawalAmount" json:"withdrawal_amount,omitempty"`
+	ReturnAddress        *ExchangeAddress `protobuf:"bytes,7,opt,name=return_address,json=returnAddress" json:"return_address,omitempty"`
+	ApiKey               []byte           `protobuf:"bytes,8,opt,name=api_key,json=apiKey" json:"api_key,omitempty"`
+	MinerFee             []byte           `protobuf:"bytes,9,opt,name=miner_fee,json=minerFee" json:"miner_fee,omitempty"`
+	OrderId              []byte           `protobuf:"bytes,10,opt,name=order_id,json=orderId" json:"order_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
 }
 
-func (m *ExchangeResponseV2) Reset()                    { *m = ExchangeResponseV2{} }
-func (m *ExchangeResponseV2) String() string            { return proto.CompactTextString(m) }
-func (*ExchangeResponseV2) ProtoMessage()               {}
-func (*ExchangeResponseV2) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{1} }
+func (m *ExchangeResponseV2) Reset()         { *m = ExchangeResponseV2{} }
+func (m *ExchangeResponseV2) String() string { return proto.CompactTextString(m) }
+func (*ExchangeResponseV2) ProtoMessage()    {}
+func (*ExchangeResponseV2) Descriptor() ([]byte, []int) {
+	return fileDescriptor_exchange_4fd234252745ec4e, []int{1}
+}
+func (m *ExchangeResponseV2) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExchangeResponseV2.Unmarshal(m, b)
+}
+func (m *ExchangeResponseV2) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExchangeResponseV2.Marshal(b, m, deterministic)
+}
+func (dst *ExchangeResponseV2) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExchangeResponseV2.Merge(dst, src)
+}
+func (m *ExchangeResponseV2) XXX_Size() int {
+	return xxx_messageInfo_ExchangeResponseV2.Size(m)
+}
+func (m *ExchangeResponseV2) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExchangeResponseV2.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExchangeResponseV2 proto.InternalMessageInfo
 
 func (m *ExchangeResponseV2) GetDepositAddress() *ExchangeAddress {
 	if m != nil {
@@ -148,16 +196,37 @@ func (m *ExchangeResponseV2) GetOrderId() []byte {
 }
 
 type SignedExchangeResponse struct {
-	Response         *ExchangeResponse   `protobuf:"bytes,1,opt,name=response" json:"response,omitempty"`
-	Signature        []byte              `protobuf:"bytes,2,opt,name=signature" json:"signature,omitempty"`
-	ResponseV2       *ExchangeResponseV2 `protobuf:"bytes,3,opt,name=responseV2" json:"responseV2,omitempty"`
-	XXX_unrecognized []byte              `json:"-"`
+	Response             *ExchangeResponse   `protobuf:"bytes,1,opt,name=response" json:"response,omitempty"`
+	Signature            []byte              `protobuf:"bytes,2,opt,name=signature" json:"signature,omitempty"`
+	ResponseV2           *ExchangeResponseV2 `protobuf:"bytes,3,opt,name=responseV2" json:"responseV2,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
 }
 
-func (m *SignedExchangeResponse) Reset()                    { *m = SignedExchangeResponse{} }
-func (m *SignedExchangeResponse) String() string            { return proto.CompactTextString(m) }
-func (*SignedExchangeResponse) ProtoMessage()               {}
-func (*SignedExchangeResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{2} }
+func (m *SignedExchangeResponse) Reset()         { *m = SignedExchangeResponse{} }
+func (m *SignedExchangeResponse) String() string { return proto.CompactTextString(m) }
+func (*SignedExchangeResponse) ProtoMessage()    {}
+func (*SignedExchangeResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_exchange_4fd234252745ec4e, []int{2}
+}
+func (m *SignedExchangeResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SignedExchangeResponse.Unmarshal(m, b)
+}
+func (m *SignedExchangeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SignedExchangeResponse.Marshal(b, m, deterministic)
+}
+func (dst *SignedExchangeResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignedExchangeResponse.Merge(dst, src)
+}
+func (m *SignedExchangeResponse) XXX_Size() int {
+	return xxx_messageInfo_SignedExchangeResponse.Size(m)
+}
+func (m *SignedExchangeResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_SignedExchangeResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SignedExchangeResponse proto.InternalMessageInfo
 
 func (m *SignedExchangeResponse) GetResponse() *ExchangeResponse {
 	if m != nil {
@@ -183,23 +252,44 @@ func (m *SignedExchangeResponse) GetResponseV2() *ExchangeResponseV2 {
 // *
 // Structure representing exchange response version 1 (deprecated)
 type ExchangeResponse struct {
-	DepositAddress    *ExchangeAddress `protobuf:"bytes,1,opt,name=deposit_address,json=depositAddress" json:"deposit_address,omitempty"`
-	DepositAmount     *uint64          `protobuf:"varint,2,opt,name=deposit_amount,json=depositAmount" json:"deposit_amount,omitempty"`
-	Expiration        *int64           `protobuf:"varint,3,opt,name=expiration" json:"expiration,omitempty"`
-	QuotedRate        *uint64          `protobuf:"varint,4,opt,name=quoted_rate,json=quotedRate" json:"quoted_rate,omitempty"`
-	WithdrawalAddress *ExchangeAddress `protobuf:"bytes,5,opt,name=withdrawal_address,json=withdrawalAddress" json:"withdrawal_address,omitempty"`
-	WithdrawalAmount  *uint64          `protobuf:"varint,6,opt,name=withdrawal_amount,json=withdrawalAmount" json:"withdrawal_amount,omitempty"`
-	ReturnAddress     *ExchangeAddress `protobuf:"bytes,7,opt,name=return_address,json=returnAddress" json:"return_address,omitempty"`
-	ApiKey            []byte           `protobuf:"bytes,8,opt,name=api_key,json=apiKey" json:"api_key,omitempty"`
-	MinerFee          *uint64          `protobuf:"varint,9,opt,name=miner_fee,json=minerFee" json:"miner_fee,omitempty"`
-	OrderId           []byte           `protobuf:"bytes,10,opt,name=order_id,json=orderId" json:"order_id,omitempty"`
-	XXX_unrecognized  []byte           `json:"-"`
+	DepositAddress       *ExchangeAddress `protobuf:"bytes,1,opt,name=deposit_address,json=depositAddress" json:"deposit_address,omitempty"`
+	DepositAmount        *uint64          `protobuf:"varint,2,opt,name=deposit_amount,json=depositAmount" json:"deposit_amount,omitempty"`
+	Expiration           *int64           `protobuf:"varint,3,opt,name=expiration" json:"expiration,omitempty"`
+	QuotedRate           *uint64          `protobuf:"varint,4,opt,name=quoted_rate,json=quotedRate" json:"quoted_rate,omitempty"`
+	WithdrawalAddress    *ExchangeAddress `protobuf:"bytes,5,opt,name=withdrawal_address,json=withdrawalAddress" json:"withdrawal_address,omitempty"`
+	WithdrawalAmount     *uint64          `protobuf:"varint,6,opt,name=withdrawal_amount,json=withdrawalAmount" json:"withdrawal_amount,omitempty"`
+	ReturnAddress        *ExchangeAddress `protobuf:"bytes,7,opt,name=return_address,json=returnAddress" json:"return_address,omitempty"`
+	ApiKey               []byte           `protobuf:"bytes,8,opt,name=api_key,json=apiKey" json:"api_key,omitempty"`
+	MinerFee             *uint64          `protobuf:"varint,9,opt,name=miner_fee,json=minerFee" json:"miner_fee,omitempty"`
+	OrderId              []byte           `protobuf:"bytes,10,opt,name=order_id,json=orderId" json:"order_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
 }
 
-func (m *ExchangeResponse) Reset()                    { *m = ExchangeResponse{} }
-func (m *ExchangeResponse) String() string            { return proto.CompactTextString(m) }
-func (*ExchangeResponse) ProtoMessage()               {}
-func (*ExchangeResponse) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{3} }
+func (m *ExchangeResponse) Reset()         { *m = ExchangeResponse{} }
+func (m *ExchangeResponse) String() string { return proto.CompactTextString(m) }
+func (*ExchangeResponse) ProtoMessage()    {}
+func (*ExchangeResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_exchange_4fd234252745ec4e, []int{3}
+}
+func (m *ExchangeResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExchangeResponse.Unmarshal(m, b)
+}
+func (m *ExchangeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExchangeResponse.Marshal(b, m, deterministic)
+}
+func (dst *ExchangeResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExchangeResponse.Merge(dst, src)
+}
+func (m *ExchangeResponse) XXX_Size() int {
+	return xxx_messageInfo_ExchangeResponse.Size(m)
+}
+func (m *ExchangeResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExchangeResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExchangeResponse proto.InternalMessageInfo
 
 func (m *ExchangeResponse) GetDepositAddress() *ExchangeAddress {
 	if m != nil {
@@ -278,9 +368,9 @@ func init() {
 	proto.RegisterType((*ExchangeResponse)(nil), "ExchangeResponse")
 }
 
-func init() { proto.RegisterFile("exchange.proto", fileDescriptor1) }
+func init() { proto.RegisterFile("exchange.proto", fileDescriptor_exchange_4fd234252745ec4e) }
 
-var fileDescriptor1 = []byte{
+var fileDescriptor_exchange_4fd234252745ec4e = []byte{
 	// 458 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x94, 0x4f, 0x6b, 0x14, 0x31,
 	0x18, 0xc6, 0x59, 0x77, 0xec, 0xce, 0xbc, 0xdb, 0xee, 0x9f, 0x08, 0x3a, 0x52, 0xff, 0xb1, 0x20,
