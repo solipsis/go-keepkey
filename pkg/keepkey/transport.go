@@ -30,6 +30,7 @@ type Keepkey struct {
 	autoButton             bool // Automatically send button presses. DebugLink must be enabled in the firmware
 	vendorID               uint16
 	productID              uint16
+	label, serial          string // Used for specifying which device to send commands if multiple are connected
 	logger
 	deviceQueue, debugQueue, infoQueue chan *deviceResponse
 }
@@ -74,6 +75,14 @@ func (kk *Keepkey) log(str string, args ...interface{}) {
 	if kk.logger != nil {
 		kk.logger.Printf(str, args...)
 	}
+}
+
+func (kk *Keepkey) Serial() string {
+	return kk.serial
+}
+
+func (kk *Keepkey) Label() string {
+	return kk.label
 }
 
 // SetLogger sets the logging device for this keepkey
@@ -184,17 +193,22 @@ func GetDevicesWithConfig(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 		}
 
 		// Ping the device and ask for its features
-		if _, err = kk.Initialize(device); err != nil {
+		features, err := kk.Initialize(device)
+		if err != nil {
 			fmt.Println("Device failed to respond to initial request, dropping: ", err)
 			continue
 		}
+
+		// store information to identify this particular device later
+		kk.serial = deviceIFace.Serial
+		kk.label = features.GetLabel()
+
 		devices = append(devices, kk)
 	}
 	if len(devices) < 1 {
 		return devices, errors.New("No keepkeys detected")
 	}
 
-	fmt.Println("Connected to ", len(devices), "keepkeys")
 	return devices, nil
 }
 
