@@ -1,4 +1,5 @@
 //go:generate protoc --go_out=import_path=kkProto:. types.proto exchange.proto messages.proto
+//go:generate go run typeRegistryGenerator/typeRegistryGenerator.go
 package kkProto
 
 import (
@@ -8,6 +9,7 @@ import (
 )
 
 func Type(msg proto.Message) uint16 {
+
 	return uint16(MessageType_value["MessageType_"+reflect.TypeOf(msg).Elem().Name()])
 }
 
