@@ -62,10 +62,17 @@ import (
 )
 
 func init() {
-	{{range $val := .}}
-	TypeRegistry["{{$val}}"] = reflect.TypeOf({{$val}}{})
-	{{end}}
+{{- range $val := .}}
+	typeRegistry["{{$val}}"] = reflect.TypeOf({{$val}}{})
+{{- end}}
 }
 
-var TypeRegistry = make(map[string]reflect.Type)
+var typeRegistry = make(map[string]reflect.Type)
+
+// TypeRegistry returns the reflect.Type associated with a given string type-name
+// The entries registered in the map should be structs implementing proto.Message
+func TypeRegistry(t string) (reflect.Type, bool) {
+	v, ok := typeRegistry[t]
+	return v, ok
+}
 `
