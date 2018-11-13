@@ -2,6 +2,7 @@ package keepkey
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/google/gousb"
 	"github.com/karalabe/hid"
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
 )
@@ -26,7 +28,7 @@ const (
 // connection to the debug link if enabled
 type Keepkey struct {
 	info                   hid.DeviceInfo
-	device, debug, infoOut *hid.Device
+	device, debug, infoOut io.ReadWriter
 	autoButton             bool // Automatically send button presses. DebugLink must be enabled in the firmware
 	vendorID               uint16
 	productID              uint16
@@ -110,6 +112,7 @@ func discoverKeepkeys() map[string]*hidInterfaces {
 	// corresponding debug link if enabled
 	deviceMap := make(map[string]*hidInterfaces)
 	for _, info := range hid.Enumerate(vendorID, 0) {
+		fmt.Println("INFO:", info)
 
 		// TODO: revisit this when keepkey adds additional product id's
 		if info.ProductID == productID {
@@ -141,70 +144,118 @@ func GetDevices() ([]*Keepkey, error) {
 	return GetDevicesWithConfig(&KeepkeyConfig{Logger: log.New(ioutil.Discard, "", 0), AutoButton: true})
 }
 
+// TODO; DELETE. Endpoint struct to satisfy io.ReadWriter
+type eps struct {
+	r *gousb.InEndpoint
+	w *gousb.OutEndpoint
+}
+
+func (e *eps) Read(p []byte) (n int, err error) {
+	fmt.Println("Reading USB")
+	return e.r.Read(p)
+}
+func (e *eps) Write(p []byte) (n int, err error) {
+	fmt.Println("Writing USB")
+	return e.w.Write(p)
+}
+
 // GetDevices establishes connections to all available KeepKey devices and
 // their enabled HID interfaces (primary/debug/info)
 // the provided config is applied to all found keepkeys
 func GetDevicesWithConfig(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 
 	// Open HID connections to all devices found in the previous step
-	var deviceIFace, debugIFace, infoIFace hid.DeviceInfo
+	//var deviceIFace, debugIFace, infoIFace hid.DeviceInfo
 	devices := make([]*Keepkey, 0)
-	for _, IFaces := range discoverKeepkeys() {
-		kk := newKeepkeyFromConfig(cfg)
-		deviceIFace = IFaces.device
-		debugIFace = IFaces.debug
-		infoIFace = IFaces.info
-
-		if deviceIFace.Path == "" {
-			continue
-		}
-
-		// Open connection to device on primary HID interface
-		device, err := deviceIFace.Open()
-		if err != nil {
-			fmt.Printf("Unable to connect to HID: %v dropping..., %s\n", deviceIFace, err)
-			continue
-		}
-		kk.device = device
-		go listenForMessages(device, kk.deviceQueue)
-
-		// debug HID interface
-		if debugIFace.Path != "" {
-			debug, err := debugIFace.Open()
-			if err != nil {
-				fmt.Println("unable to initiate debug link, skipping...")
-				continue
-			}
-			fmt.Println("Debug link established")
-			kk.debug = debug
-			go listenForMessages(debug, kk.debugQueue)
-		}
-
-		// info HID interface
-		if infoIFace.Path != "" {
-			info, err := infoIFace.Open()
-			if err != nil {
-				fmt.Println("unable to connect to Info HID interface, skipping...")
-				continue
-			}
-			fmt.Println("Connected to Info HID interface")
-			kk.infoOut = info
-			go listenForMessages(info, kk.infoQueue)
-		}
-
-		// Ping the device and ask for its features
-		features, err := kk.Initialize(device)
-		if err != nil {
-			fmt.Println("Device failed to respond to initial request, dropping: ", err)
-			continue
-		}
-
-		// store information to identify this particular device later
-		kk.serial = deviceIFace.Serial
-		kk.label = features.GetLabel()
-
-		devices = append(devices, kk)
+	ctx := gousb.NewContext()
+	dev, err := ctx.OpenDeviceWithVIDPID(0x2b24, 0x0001)
+	if err != nil {
+		log.Fatalf("Could not open device: %v", err)
 	}
+
+	config, err := dev.Config(1)
+	if err != nil {
+		log.Fatal("canofofig", err)
+	}
+	fmt.Println("config: ", config)
+
+	intf, _, err := dev.DefaultInterface()
+	if err != nil {
+		log.Fatalf("%s.DefaultInterface(): %v", dev, err)
+	}
+
+	in, err := intf.InEndpoint(1)
+	if err != nil {
+		log.Fatalf("%s.inEndpoint(0x81): %v", intf, err)
+	}
+
+	out, err := intf.OutEndpoint(1)
+	if err != nil {
+		log.Fatalf("%s.OutEndpoint(0x1): %v", intf, err)
+	}
+
+	kk := newKeepkey()
+	kk.device = &eps{in, out}
+	devices = append(devices, kk)
+
+	/*
+		for _, IFaces := range discoverKeepkeys() {
+			kk := newKeepkeyFromConfig(cfg)
+			deviceIFace = IFaces.device
+			debugIFace = IFaces.debug
+			infoIFace = IFaces.info
+
+			if deviceIFace.Path == "" {
+				continue
+			}
+
+			// Open connection to device on primary HID interface
+			device, err := deviceIFace.Open()
+			if err != nil {
+				fmt.Printf("Unable to connect to HID: %v dropping..., %s\n", deviceIFace, err)
+				continue
+			}
+			kk.device = device
+			go listenForMessages(device, kk.deviceQueue)
+
+			// debug HID interface
+			if debugIFace.Path != "" {
+				debug, err := debugIFace.Open()
+				if err != nil {
+					fmt.Println("unable to initiate debug link, skipping...")
+					continue
+				}
+				fmt.Println("Debug link established")
+				kk.debug = debug
+				go listenForMessages(debug, kk.debugQueue)
+			}
+
+			// info HID interface
+			if infoIFace.Path != "" {
+				info, err := infoIFace.Open()
+				if err != nil {
+					fmt.Println("unable to connect to Info HID interface, skipping...")
+					continue
+				}
+				fmt.Println("Connected to Info HID interface")
+				kk.infoOut = info
+				go listenForMessages(info, kk.infoQueue)
+			}
+
+			// Ping the device and ask for its features
+			features, err := kk.Initialize(device)
+			if err != nil {
+				fmt.Println("Device failed to respond to initial request, dropping: ", err)
+				continue
+			}
+
+			// store information to identify this particular device later
+			kk.serial = deviceIFace.Serial
+			kk.label = features.GetLabel()
+
+			devices = append(devices, kk)
+		}
+	*/
 	if len(devices) < 1 {
 		return devices, errors.New("No keepkeys detected")
 	}
@@ -311,9 +362,12 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 			payload = nil
 		}
 		// send over to the device
+		fmt.Println("Chunk", hex.EncodeToString(chunk))
 		if _, err := device.Write(chunk); err != nil {
+			fmt.Println("err", err)
 			return 0, err
 		}
+		fmt.Println("Post write")
 	}
 
 	// don't wait for response if sending debug buttonPress
@@ -434,9 +488,11 @@ func isDebugMessage(req interface{}) bool {
 // Close closes the hid connection and unassoctiates that hid interface
 // with the calling Keepkey
 func (kk *Keepkey) Close() {
-	if kk.device == nil {
-		return
-	}
-	kk.device.Close()
-	kk.device = nil
+	/*
+		if kk.device == nil {
+			return
+		}
+		kk.device.Close()
+		kk.device = nil
+	*/
 }
