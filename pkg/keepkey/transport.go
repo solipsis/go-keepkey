@@ -194,9 +194,11 @@ func GetDevicesWithConfig(cfg *KeepkeyConfig) ([]*Keepkey, error) {
 		log.Fatalf("%s.OutEndpoint(0x1): %v", intf, err)
 	}
 
-	kk := newKeepkey()
-	kk.device = &eps{in, out}
+	kk := newKeepkeyFromConfig(&KeepkeyConfig{Logger: log.New(os.Stdout, "Log: ", 0)})
+	endpoints := &eps{in, out}
+	kk.device = endpoints
 	devices = append(devices, kk)
+	go listenForMessages(kk.device, kk.deviceQueue)
 
 	/*
 		for _, IFaces := range discoverKeepkeys() {
@@ -271,6 +273,7 @@ func listenForMessages(in io.Reader, out chan *deviceResponse) {
 		var reply []byte
 		var kind uint16
 		for {
+			fmt.Println("Waiting to read chunk")
 			// Read next chunk
 			if _, err := io.ReadFull(in, chunk); err != nil {
 				fmt.Println("Unable to read chunk from device:", err) // TODO: move to device specific log
@@ -308,6 +311,7 @@ func listenForMessages(in io.Reader, out chan *deviceResponse) {
 			fmt.Println("INFO: ", info.GetMsg())
 		}
 
+		fmt.Println("Device Message Received")
 		out <- &deviceResponse{reply, kind}
 	}
 }
@@ -375,6 +379,9 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 		return 0, nil
 	}
 
+	fmt.Println("Waiting to read")
+	fmt.Println("Debug: ", debug)
+	fmt.Println("queue: ", kk.deviceQueue)
 	// Read from the proper message queue
 	var response *deviceResponse
 	if debug {
@@ -384,6 +391,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	}
 	kind := response.kind
 	reply := response.reply
+	fmt.Println("Read successful")
 
 	// Try to parse the reply into the requested reply message
 	if kind == uint16(kkProto.MessageType_MessageType_Failure) {
