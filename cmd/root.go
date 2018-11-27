@@ -22,6 +22,9 @@ var debugButtonPress bool
 // Button, Pin, and passphrase protection
 var buttonProtection, pinProtection, passphraseProtection bool
 
+// Pin cache / screensaver timeout
+var autoLockDelayMs uint32
+
 // setting label, pin, language
 var label, pin, language string
 
