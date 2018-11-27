@@ -65,7 +65,7 @@ func (kk *Keepkey) ClearSession() error {
 
 // ApplySettings changes the label, language, and enabling/disabling the passphrase
 // The default language is english
-func (kk *Keepkey) ApplySettings(label, language string, enablePassphrase bool) error {
+func (kk *Keepkey) ApplySettings(label, language string, enablePassphrase bool, autoLockDelayMs uint32) error {
 
 	settings := &kkProto.ApplySettings{
 		UsePassphrase: &enablePassphrase,
@@ -76,6 +76,9 @@ func (kk *Keepkey) ApplySettings(label, language string, enablePassphrase bool) 
 	}
 	if label != "" {
 		settings.Label = &label
+	}
+	if autoLockDelayMs != 0 {
+		settings.AutoLockDelayMs = &autoLockDelayMs
 	}
 	_, err := kk.keepkeyExchange(settings, &kkProto.Success{})
 	return err
