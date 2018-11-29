@@ -42,9 +42,9 @@ type deviceResponse struct {
 	kind  uint16
 }
 
-// KeepkeyConfig specifies various attributes that can be set on a Keepkey connection such as
+// Config specifies various attributes that can be set on a Keepkey connection such as
 // where to write debug logs and whether to automatically push the button on a debugLink enabled device
-type KeepkeyConfig struct {
+type Config struct {
 	Logger     logger
 	AutoButton bool // Automatically send button presses. DebugLink must be enabled in the firmware
 }
@@ -59,7 +59,7 @@ func newKeepkey() *Keepkey {
 	}
 }
 
-func newKeepkeyFromConfig(cfg *KeepkeyConfig) *Keepkey {
+func newKeepkeyFromConfig(cfg *Config) *Keepkey {
 	kk := newKeepkey()
 	kk.logger = cfg.Logger
 	kk.autoButton = cfg.AutoButton
@@ -101,7 +101,16 @@ type hidInterfaces struct {
 const (
 	HID_DEVICE = "0"
 	HID_DEBUG  = "1"
-	HID_INFO   = "2"
+	//HID_INFO   = "2"
+)
+
+// Transport Types
+type TransportType int
+
+const (
+	TransportHID TransportType = iota
+	TransportWebUSB
+	TransportU2F
 )
 
 // discoverKeepkeys searches advertised hid interfaces for devices
@@ -128,9 +137,10 @@ func discoverKeepkeys() map[string]*hidInterfaces {
 				deviceMap[pathKey].debug = info
 			} else if strings.HasSuffix(info.Path, HID_DEVICE) {
 				deviceMap[pathKey].device = info
-			} else if strings.HasSuffix(info.Path, HID_INFO) {
-				deviceMap[pathKey].info = info
 			}
+			/* else if strings.HasSuffix(info.Path, HID_INFO) {*/
+			//deviceMap[pathKey].info = info
+			/* }*/
 		}
 	}
 
@@ -141,7 +151,7 @@ func discoverKeepkeys() map[string]*hidInterfaces {
 // their debug interfaces if that is enabled in the firmware
 // using the default configuration paramaters
 func GetDevices() ([]*Keepkey, error) {
-	return GetDevicesWithConfig(&KeepkeyConfig{Logger: log.New(ioutil.Discard, "", 0), AutoButton: true})
+	return GetDevicesWithConfig(&Config{Logger: log.New(ioutil.Discard, "", 0), AutoButton: true})
 }
 
 // TODO; DELETE. Endpoint struct to satisfy io.ReadWriter
@@ -162,43 +172,61 @@ func (e *eps) Write(p []byte) (n int, err error) {
 // GetDevices establishes connections to all available KeepKey devices and
 // their enabled HID interfaces (primary/debug/info)
 // the provided config is applied to all found keepkeys
-func GetDevicesWithConfig(cfg *KeepkeyConfig) ([]*Keepkey, error) {
+func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
+	//enumerateWebUSB()
 
 	// Open HID connections to all devices found in the previous step
 	//var deviceIFace, debugIFace, infoIFace hid.DeviceInfo
 	devices := make([]*Keepkey, 0)
-	ctx := gousb.NewContext()
-	dev, err := ctx.OpenDeviceWithVIDPID(0x2b24, 0x0001)
+
+	webUSBDevices, err := enumerateWebUSB()
 	if err != nil {
-		log.Fatalf("Could not open device: %v", err)
+		return nil, err
+	}
+	for _, dev := range webUSBDevices {
+		fmt.Println(dev)
+		/*
+			config, err := dev.Config(1)
+			if err != nil {
+				log.Fatal("canofofig", err)
+			}
+			fmt.Println("config: ", config)
+
+			intf, _, err := dev.DefaultInterface()
+			if err != nil {
+				log.Fatalf("%s.DefaultInterface(): %v", dev, err)
+			}
+
+			in, err := intf.InEndpoint(1)
+			if err != nil {
+				log.Fatalf("%s.inEndpoint(0x81): %v", intf, err)
+			}
+
+			out, err := intf.OutEndpoint(1)
+			if err != nil {
+				log.Fatalf("%s.OutEndpoint(0x1): %v", intf, err)
+			}
+			/*
+
+				ctx := gousb.NewContext()
+				dev, err := ctx.OpenDeviceWithVIDPID(0x2b24, 0x0001)
+				if err != nil {
+					log.Fatalf("Could not open device: %v", err)
+				}
+		*/
 	}
 
-	config, err := dev.Config(1)
-	if err != nil {
-		log.Fatal("canofofig", err)
+	kk := newKeepkeyFromConfig(&Config{Logger: log.New(os.Stdout, "Log: ", 0), AutoButton: true})
+	//endpoints := &eps{in, out}
+	kk.device = webUSBDevices[0].conn
+	if webUSBDevices[0].debug != nil {
+		kk.debug = webUSBDevices[0].debug
+		fmt.Println("DEBUG", kk.debug)
+		go listenForMessages(kk.debug, kk.debugQueue)
 	}
-	fmt.Println("config: ", config)
-
-	intf, _, err := dev.DefaultInterface()
-	if err != nil {
-		log.Fatalf("%s.DefaultInterface(): %v", dev, err)
-	}
-
-	in, err := intf.InEndpoint(1)
-	if err != nil {
-		log.Fatalf("%s.inEndpoint(0x81): %v", intf, err)
-	}
-
-	out, err := intf.OutEndpoint(1)
-	if err != nil {
-		log.Fatalf("%s.OutEndpoint(0x1): %v", intf, err)
-	}
-
-	kk := newKeepkeyFromConfig(&KeepkeyConfig{Logger: log.New(os.Stdout, "Log: ", 0)})
-	endpoints := &eps{in, out}
-	kk.device = endpoints
 	devices = append(devices, kk)
 	go listenForMessages(kk.device, kk.deviceQueue)
+	kk.Initialize(kk.device)
 
 	/*
 		for _, IFaces := range discoverKeepkeys() {
