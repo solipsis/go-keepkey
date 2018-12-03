@@ -1,6 +1,7 @@
 package keepkey
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -40,14 +41,17 @@ func (w *webUSBEndpoints) Write(p []byte) (n int, err error) {
 func enumerateWebUSB() ([]*transport, error) {
 	ctx := gousb.NewContext()
 	devices, err := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
+
+		fmt.Println("Device description")
 		fmt.Println(*desc)
+		buf, _ := json.MarshalIndent(*desc, "*", "    ")
+		fmt.Println(string(buf))
 		if uint16(desc.Vendor) == uint16(vendorID) && uint16(desc.Product) == uint16(productID) {
 			return true
 		}
 		return false
 	})
 	if err != nil {
-		fmt.Println("OPEN ERROR")
 		return nil, err
 	}
 
@@ -82,7 +86,6 @@ func claimEndpoints(d *gousb.Device, intfNum int, epNum int) (*webUSBEndpoints, 
 		return nil, err
 	}
 
-	// TODO: store done return value
 	intf, err := cfg.Interface(intfNum, 0)
 	if err != nil {
 		return nil, err
