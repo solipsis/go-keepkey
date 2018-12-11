@@ -16,7 +16,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/fatih/color"
-	"github.com/karalabe/hid"
 	"github.com/pkg/term"
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
 )

@@ -1,7 +1,6 @@
 package keepkey
 
 import (
-	"fmt"
 	"io"
 
 	"github.com/google/gousb"
@@ -40,14 +39,12 @@ func (w *webUSBEndpoints) Write(p []byte) (n int, err error) {
 func enumerateWebUSB() ([]*transport, error) {
 	ctx := gousb.NewContext()
 	devices, err := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
-		fmt.Println(*desc)
 		if uint16(desc.Vendor) == uint16(vendorID) && uint16(desc.Product) == uint16(productID) {
 			return true
 		}
 		return false
 	})
 	if err != nil {
-		fmt.Println("OPEN ERROR")
 		return nil, err
 	}
 
