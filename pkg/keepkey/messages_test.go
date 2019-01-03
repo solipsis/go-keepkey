@@ -38,8 +38,7 @@ func TestMain(m *testing.M) {
 
 func TestLoadDevice(t *testing.T) {
 	kk.WipeDevice()
-	words := "water explain wink differ size gift sort silly collect anger anger yard"
-	if err := kk.LoadDevice(strings.Split(words, " "), "", "", false, true); err != nil {
+	if err := kk.LoadDevice(strings.Split(testSeed, " "), "", "", false, true); err != nil {
 		t.Fatal("Unable to load device from seed words", err)
 	}
 }

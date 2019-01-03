@@ -167,7 +167,7 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 		//return nil, err
 	}
 	for _, dev := range webUSBDevices {
-		kk := newKeepkeyFromConfig(&Config{Logger: log.New(os.Stdout, "Log: ", 0), AutoButton: true})
+		kk := newKeepkeyFromConfig(cfg)
 		kk.device = dev.conn
 		if dev.debug != nil {
 			kk.debug = dev.debug
