@@ -60,12 +60,15 @@ func enumerateWebUSB() ([]*transport, error) {
 			retErr = err
 			continue
 		}
+		transport := &transport{conn: ep}
 
 		// Claim the debug interface
 		// if something fails we just assume debug isn't enabled
-		dep, _ := claimEndpoints(d, debugInterface, debugEndpoint)
+		if dep, err := claimEndpoints(d, debugInterface, debugEndpoint); err == nil {
+			transport.debug = dep
+		}
 
-		transports = append(transports, &transport{conn: ep, debug: dep})
+		transports = append(transports, transport)
 	}
 
 	return transports, retErr
