@@ -16,17 +16,17 @@ import (
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
 )
 
-const (
-	vendorID uint16 = 0x2B24
-	//vendorID  uint16 = 0x534c
-	productID uint16 = 0x0002 // TODO: support old and new product ID
+var (
+	vendorID   uint16 = 0x2B24
+	productIDs        = []uint16{0x0001, 0x0002}
+	//vendorID  uint16 = 0x534c TREZOR
 )
 
 // Keepkey represents an open HID connection to a keepkey and possibly a
 // connection to the debug link if enabled
 type Keepkey struct {
 	info                   hid.DeviceInfo
-	device, debug, infoOut io.ReadWriter
+	device, debug, infoOut io.ReadWriteCloser
 	autoButton             bool // Automatically send button presses. DebugLink must be enabled in the firmware
 	vendorID               uint16
 	productID              uint16
@@ -49,8 +49,8 @@ type Config struct {
 
 func newKeepkey() *Keepkey {
 	return &Keepkey{
-		vendorID:   vendorID,
-		productID:  productID,
+		vendorID: vendorID,
+		//productID:  productID,
 		autoButton: true,
 		//logger:    log.New(ioutil.Discard, "", 0),
 		logger: log.New(os.Stdout, "", 0),
@@ -122,21 +122,21 @@ func discoverKeepkeys() map[string]*hidInterfaces {
 	// corresponding debug link if enabled
 	deviceMap := make(map[string]*hidInterfaces)
 	for _, info := range hid.Enumerate(vendorID, 0) {
+		for _, pid := range productIDs {
 
-		// TODO: revisit this when keepkey adds additional product id's
-		if info.ProductID == productID {
+			if info.ProductID == pid {
+				// Use serial string to differentiate between different keepkeys
+				pathKey := info.Serial
+				if deviceMap[pathKey] == nil {
+					deviceMap[pathKey] = new(hidInterfaces)
+				}
 
-			// Use serial string to differentiate between different keepkeys
-			pathKey := info.Serial
-			if deviceMap[pathKey] == nil {
-				deviceMap[pathKey] = new(hidInterfaces)
-			}
-
-			// seperate connection to debug/info HID interface if debug link is enabled
-			if strings.HasSuffix(info.Path, HIDInterfaceDebug) {
-				deviceMap[pathKey].debug = info
-			} else if strings.HasSuffix(info.Path, HIDInterfaceStandard) {
-				deviceMap[pathKey].device = info
+				// seperate connection to debug/info HID interface if debug link is enabled
+				if strings.HasSuffix(info.Path, HIDInterfaceDebug) {
+					deviceMap[pathKey].debug = info
+				} else if strings.HasSuffix(info.Path, HIDInterfaceStandard) {
+					deviceMap[pathKey].device = info
+				}
 			}
 		}
 	}
@@ -464,14 +464,15 @@ func isDebugMessage(req interface{}) bool {
 	return false
 }
 
-// Close closes the hid connection and unassoctiates that hid interface
+// Close closes the transport connection and unassoctiates that nterface
 // with the calling Keepkey
 func (kk *Keepkey) Close() {
-	/*
-		if kk.device == nil {
-			return
-		}
+	if kk.device != nil {
 		kk.device.Close()
 		kk.device = nil
-	*/
+	}
+	if kk.debug != nil {
+		kk.debug.Close()
+		kk.debug = nil
+	}
 }

@@ -15,32 +15,40 @@ const (
 )
 
 type transport struct {
-	conn  io.ReadWriter // primary interface to device
-	debug io.ReadWriter // debug link connection to device if enabled
+	conn  io.ReadWriteCloser // primary interface to device
+	debug io.ReadWriteCloser // debug link connection to device if enabled
 }
 
+// webUSBEndpoints holds handles to the input and output interfaces for a webUSB device
+// as well as the configuration for cleaup when done with the device
 type webUSBEndpoints struct {
 	in  *gousb.InEndpoint
 	out *gousb.OutEndpoint
+	cfg *gousb.Config
 }
 
+// implements io.Reader
 func (w *webUSBEndpoints) Read(p []byte) (n int, err error) {
 	return w.in.Read(p)
 }
 
+// implements io.Writer
 func (w *webUSBEndpoints) Write(p []byte) (n int, err error) {
 	return w.out.Write(p)
 }
 
-// able to enumerate all usb devices
-// return name + endpoints so can combine with other devices of same path?
-// How to attach u2f along with other endpoints. 0xF1D0
+// implements io.Closer
+func (w *webUSBEndpoints) Close() error {
+	return w.cfg.Close()
+}
 
 func enumerateWebUSB() ([]*transport, error) {
 	ctx := gousb.NewContext()
 	devices, err := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
-		if uint16(desc.Vendor) == uint16(vendorID) && uint16(desc.Product) == uint16(productID) {
-			return true
+		for _, pid := range productIDs {
+			if uint16(desc.Vendor) == uint16(vendorID) && uint16(desc.Product) == uint16(pid) {
+				return true
+			}
 		}
 		return false
 	})
@@ -76,7 +84,6 @@ func enumerateWebUSB() ([]*transport, error) {
 
 // claimEndpoints claims and returns the usb endpoint for a given interface
 func claimEndpoints(d *gousb.Device, intfNum int, epNum int) (*webUSBEndpoints, error) {
-	// TODO close config when done
 	cfg, err := d.Config(1)
 	if err != nil {
 		return nil, err
@@ -98,5 +105,5 @@ func claimEndpoints(d *gousb.Device, intfNum int, epNum int) (*webUSBEndpoints, 
 		return nil, err
 	}
 
-	return &webUSBEndpoints{in: in, out: out}, nil
+	return &webUSBEndpoints{in: in, out: out, cfg: cfg}, nil
 }

@@ -60,6 +60,12 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	// Cleanup
+	// TODO: should probably clean up other devices even if they weren't used
+	if kk != nil {
+		kk.Close()
+	}
 }
 
 func connectDevice() {
