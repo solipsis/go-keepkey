@@ -81,7 +81,17 @@ func connectDevice() {
 	}
 	fmt.Printf("Connected to %d devices\n", len(kks))
 	for _, d := range kks {
-		fmt.Printf("  -- Serial#: %s, Label: %s\n", d.Serial(), d.Label())
+		str := "  --  "
+		if d.Serial() != "" {
+			str += " Serial: " + d.Serial()
+		}
+		if d.Label() != "" {
+			str += " Label: " + d.Label()
+		}
+		if d.ID() != "" {
+			str += " ID: " + d.ID()
+		}
+		fmt.Println(str)
 	}
 
 	// Connect to the specified keepkey or if none is specified connect to the first device found

@@ -17,11 +17,11 @@ var (
 // Keepkey represents an open HID connection to a keepkey and possibly a
 // connection to the debug link if enabled
 type Keepkey struct {
-	transport     *transport
-	autoButton    bool // Automatically send button presses. DebugLink must be enabled in the firmware
-	vendorID      uint16
-	productID     uint16
-	label, serial string // Used for specifying which device to send commands if multiple are connected
+	transport         *transport
+	autoButton        bool // Automatically send button presses. DebugLink must be enabled in the firmware
+	vendorID          uint16
+	productID         uint16
+	label, serial, id string // Used for specifying which device to send commands if multiple are connected
 	logger
 	deviceQueue, debugQueue chan *deviceResponse // for subscribing to responses over different interfaces
 }
@@ -72,11 +72,11 @@ func (kk *Keepkey) Label() string {
 	return kk.label
 }
 
-// DeviceID returns the device hardware device ID. NOTE: This is different than the deviceID
-// advertised by the device for the HID and webUSB protocols. This deviceID plays no part in
+// ID returns the device hardware device ID. NOTE: This is different than the deviceID
+// advertised by the device for the HID and webUSB protocols. This ID plays no part in
 // the communiaction protocols and is purely for device identification
-func (kk *Keepkey) DeviceID() string {
-	return kk.deviceID
+func (kk *Keepkey) ID() string {
+	return kk.id
 }
 
 func newKeepkey() *Keepkey {

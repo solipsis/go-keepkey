@@ -15,17 +15,6 @@ import (
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
 )
 
-// tuple of HID/debug interfaces
-type hidInterfaces struct {
-	device, debug hid.DeviceInfo
-}
-
-// HID INTERFACE DESCRIPTORS
-const (
-	HIDInterfaceStandard = "0"
-	HIDInterfaceDebug    = "1"
-)
-
 // TransportType defines the interface to interact with the device
 type TransportType int
 
@@ -35,36 +24,6 @@ const (
 	TransportWebUSB
 	TransportU2F
 )
-
-// discoverKeepkeys searches advertised hid interfaces for devices
-// that appear to be keepkeys
-func discoverHIDKeepkeys() map[string]*hidInterfaces {
-
-	// Iterate over all connected keepkeys pairing each one with its
-	// corresponding debug link if enabled
-	deviceMap := make(map[string]*hidInterfaces)
-	for _, info := range hid.Enumerate(vendorID, 0) {
-		for _, pid := range productIDs {
-
-			if info.ProductID == pid {
-				// Use serial string to differentiate between different keepkeys
-				pathKey := info.Serial
-				if deviceMap[pathKey] == nil {
-					deviceMap[pathKey] = new(hidInterfaces)
-				}
-
-				// seperate connection to debug/info HID interface if debug link is enabled
-				if strings.HasSuffix(info.Path, HIDInterfaceDebug) {
-					deviceMap[pathKey].debug = info
-				} else if strings.HasSuffix(info.Path, HIDInterfaceStandard) {
-					deviceMap[pathKey].device = info
-				}
-			}
-		}
-	}
-
-	return deviceMap
-}
 
 // GetDevices establishes connections to all available KeepKey devices and
 // their debug interfaces if that is enabled in the firmware
@@ -82,6 +41,7 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 	var deviceIFace, debugIFace hid.DeviceInfo
 	devices := make([]*Keepkey, 0)
 
+	// find all advertised webUSB devices
 	webUSBDevices, err := enumerateWebUSB()
 	if err != nil {
 		// TODO: Can't find good way to tell if device is webusb or hid because it is advertised on both?
@@ -91,6 +51,8 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 			fmt.Println("Unable to connect to device of webusb, ", err)
 		}
 	}
+
+	// establish connection to all found webUSB devices
 	for _, dev := range webUSBDevices {
 		kk := newKeepkeyFromConfig(cfg)
 		kk.transport = dev
@@ -98,10 +60,21 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 			go listenForMessages(kk.transport.debug, kk.debugQueue)
 			fmt.Println("DebugLink established over WebUSB")
 		}
-		devices = append(devices, kk)
 		go listenForMessages(kk.transport.conn, kk.deviceQueue)
-		kk.Initialize()
 
+		// Ping the device and ask for its features
+		features, err := kk.Initialize()
+		if err != nil {
+			fmt.Println("Device failed to respond to initial request, dropping: ", err)
+			continue
+		}
+
+		// store information to identify this particular device later
+		kk.serial = deviceIFace.Serial
+		kk.label = features.GetLabel()
+		kk.id = features.GetDeviceId()
+
+		devices = append(devices, kk)
 	}
 
 	// HID TODO: move to seperate implementation file
@@ -146,6 +119,7 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 		// store information to identify this particular device later
 		kk.serial = deviceIFace.Serial
 		kk.label = features.GetLabel()
+		kk.id = features.GetDeviceId()
 
 		devices = append(devices, kk)
 	}
@@ -156,7 +130,7 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 	return devices, nil
 }
 
-// passively listen for messages on a hid interface
+// passively listen for messages on a transport interface
 func listenForMessages(in io.Reader, out chan *deviceResponse) {
 	for {
 		// stream the reply back in 64 byte chunks
