@@ -8,7 +8,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/golang/protobuf/proto"
@@ -16,92 +15,15 @@ import (
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
 )
 
-var (
-	vendorID   uint16 = 0x2B24
-	productIDs        = []uint16{0x0001, 0x0002}
-	//vendorID  uint16 = 0x534c TREZOR
-)
-
-// Keepkey represents an open HID connection to a keepkey and possibly a
-// connection to the debug link if enabled
-type Keepkey struct {
-	info                   hid.DeviceInfo
-	device, debug, infoOut io.ReadWriteCloser
-	autoButton             bool // Automatically send button presses. DebugLink must be enabled in the firmware
-	vendorID               uint16
-	productID              uint16
-	label, serial          string // Used for specifying which device to send commands if multiple are connected
-	logger
-	deviceQueue, debugQueue, infoQueue chan *deviceResponse
-}
-
-type deviceResponse struct {
-	reply []byte
-	kind  uint16
-}
-
-// Config specifies various attributes that can be set on a Keepkey connection such as
-// where to write debug logs and whether to automatically push the button on a debugLink enabled device
-type Config struct {
-	Logger     logger
-	AutoButton bool // Automatically send button presses. DebugLink must be enabled in the firmware
-}
-
-func newKeepkey() *Keepkey {
-	return &Keepkey{
-		vendorID: vendorID,
-		//productID:  productID,
-		autoButton: true,
-		//logger:    log.New(ioutil.Discard, "", 0),
-		logger: log.New(os.Stdout, "", 0),
-	}
-}
-
-func newKeepkeyFromConfig(cfg *Config) *Keepkey {
-	kk := newKeepkey()
-	kk.logger = cfg.Logger
-	kk.autoButton = cfg.AutoButton
-	kk.deviceQueue = make(chan *deviceResponse, 1)
-	kk.debugQueue = make(chan *deviceResponse, 1)
-
-	return kk
-}
-
-type logger interface {
-	Printf(string, ...interface{})
-}
-
-func (kk *Keepkey) log(str string, args ...interface{}) {
-	if kk.logger != nil {
-		kk.logger.Printf(str, args...)
-	}
-}
-
-// Serial returns the serial id of the device
-func (kk *Keepkey) Serial() string {
-	return kk.serial
-}
-
-// Label returns the user set lable identifying the device
-func (kk *Keepkey) Label() string {
-	return kk.label
-}
-
-// SetLogger sets the logging device for this keepkey
-func (kk *Keepkey) SetLogger(l logger) {
-	kk.logger = l
-}
-
-// tuple of keepkey and optionally its debug/info interfaces
+// tuple of HID/debug interfaces
 type hidInterfaces struct {
-	device, debug, info hid.DeviceInfo
+	device, debug hid.DeviceInfo
 }
 
 // HID INTERFACE DESCRIPTORS
 const (
 	HIDInterfaceStandard = "0"
 	HIDInterfaceDebug    = "1"
-	//HID_INFO   = "2"
 )
 
 // TransportType defines the interface to interact with the device
@@ -116,7 +38,7 @@ const (
 
 // discoverKeepkeys searches advertised hid interfaces for devices
 // that appear to be keepkeys
-func discoverKeepkeys() map[string]*hidInterfaces {
+func discoverHIDKeepkeys() map[string]*hidInterfaces {
 
 	// Iterate over all connected keepkeys pairing each one with its
 	// corresponding debug link if enabled
@@ -155,37 +77,39 @@ func GetDevices() ([]*Keepkey, error) {
 // their enabled HID interfaces (primary/debug/info)
 // the provided config is applied to all found keepkeys
 func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
-	//enumerateWebUSB()
 
 	// Open HID connections to all devices found in the previous step
-	var deviceIFace, debugIFace, infoIFace hid.DeviceInfo
+	var deviceIFace, debugIFace hid.DeviceInfo
 	devices := make([]*Keepkey, 0)
 
 	webUSBDevices, err := enumerateWebUSB()
 	if err != nil {
-		fmt.Println("Unable to connect to device of webusb, ", err) // TODO: Can't find good way to tell if device is webusb or hid because it is advertised on both?
-		//return nil, err
+		// TODO: Can't find good way to tell if device is webusb or hid because it is advertised on both?
+		// Swallow output if pid=0001 because this device is probably in HID->webUSB limbo and will
+		// soon be updated
+		if !strings.Contains(err.Error(), "pid=0001") {
+			fmt.Println("Unable to connect to device of webusb, ", err)
+		}
 	}
 	for _, dev := range webUSBDevices {
 		kk := newKeepkeyFromConfig(cfg)
-		kk.device = dev.conn
+		kk.transport = dev
 		if dev.debug != nil {
-			kk.debug = dev.debug
-			go listenForMessages(kk.debug, kk.debugQueue)
+			go listenForMessages(kk.transport.debug, kk.debugQueue)
 			fmt.Println("DebugLink established over WebUSB")
 		}
 		devices = append(devices, kk)
-		go listenForMessages(kk.device, kk.deviceQueue)
-		kk.Initialize(kk.device)
+		go listenForMessages(kk.transport.conn, kk.deviceQueue)
+		kk.Initialize()
 
 	}
 
 	// HID TODO: move to seperate implementation file
-	for _, IFaces := range discoverKeepkeys() {
+	for _, IFaces := range discoverHIDKeepkeys() {
 		kk := newKeepkeyFromConfig(cfg)
+		kk.transport = new(transport)
 		deviceIFace = IFaces.device
 		debugIFace = IFaces.debug
-		infoIFace = IFaces.info
 
 		if deviceIFace.Path == "" {
 			continue
@@ -197,7 +121,7 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 			fmt.Printf("Unable to connect to HID: %v dropping..., %s\n", deviceIFace, err)
 			continue
 		}
-		kk.device = device
+		kk.transport.conn = device
 		go listenForMessages(device, kk.deviceQueue)
 
 		// debug HID interface
@@ -207,25 +131,13 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 				fmt.Println("unable to initiate debug link, skipping...")
 				continue
 			}
-			fmt.Println("Debug link established")
-			kk.debug = debug
+			fmt.Println("Debug link established over HID")
+			kk.transport.debug = debug
 			go listenForMessages(debug, kk.debugQueue)
 		}
 
-		// info HID interface
-		if infoIFace.Path != "" {
-			info, err := infoIFace.Open()
-			if err != nil {
-				fmt.Println("unable to connect to Info HID interface, skipping...")
-				continue
-			}
-			fmt.Println("Connected to Info HID interface")
-			kk.infoOut = info
-			go listenForMessages(info, kk.infoQueue)
-		}
-
 		// Ping the device and ask for its features
-		features, err := kk.Initialize(device)
+		features, err := kk.Initialize()
 		if err != nil {
 			fmt.Println("Device failed to respond to initial request, dropping: ", err)
 			continue
@@ -278,16 +190,6 @@ func listenForMessages(in io.Reader, out chan *deviceResponse) {
 				break
 			}
 		}
-		// TODO: refactor into handler funclist per hid interface
-		// TODO: gracefully terminate message listeners at program termination
-		if kind == uint16(kkProto.MessageType_MessageType_DebugLinkInfo) {
-			info := new(kkProto.DebugLinkInfo)
-			err := proto.Unmarshal(reply, info)
-			if err != nil {
-				fmt.Println("Unable to parse INFO message")
-			}
-			fmt.Println("INFO: ", info.GetMsg())
-		}
 
 		out <- &deviceResponse{reply, kind}
 	}
@@ -309,11 +211,11 @@ func pretty(m proto.Message) string {
 func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) (int, error) {
 	kk.log("Sending payload to device:\n%s:\n%s", kkProto.Name(kkProto.Type(req)), pretty(req))
 
-	device := kk.device
+	device := kk.transport.conn
 	debug := false
 	// If debug is enabled send over the debug HID interface
-	if isDebugMessage(req) && kk.debug != nil {
-		device = kk.debug
+	if isDebugMessage(req) && kk.transport.debug != nil {
+		device = kk.transport.debug
 		debug = true
 	}
 
@@ -379,7 +281,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	// handle button requests and forward the results
 	if kind == uint16(kkProto.MessageType_MessageType_ButtonRequest) {
 		promptButton()
-		if kk.autoButton && kk.debug != nil {
+		if kk.autoButton && kk.transport.debug != nil {
 			t := true
 			fmt.Println("sending debug press")
 			kk.keepkeyExchange(&kkProto.DebugLinkDecision{YesNo: &t}, &kkProto.Success{})
@@ -467,12 +369,12 @@ func isDebugMessage(req interface{}) bool {
 // Close closes the transport connection and unassoctiates that nterface
 // with the calling Keepkey
 func (kk *Keepkey) Close() {
-	if kk.device != nil {
-		kk.device.Close()
-		kk.device = nil
+	if kk.transport.conn != nil {
+		kk.transport.conn.Close()
+		kk.transport.conn = nil
 	}
-	if kk.debug != nil {
-		kk.debug.Close()
-		kk.debug = nil
+	if kk.transport.debug != nil {
+		kk.transport.debug.Close()
+		kk.transport.debug = nil
 	}
 }

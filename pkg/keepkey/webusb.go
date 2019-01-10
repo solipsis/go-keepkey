@@ -1,8 +1,6 @@
 package keepkey
 
 import (
-	"io"
-
 	"github.com/google/gousb"
 )
 
@@ -13,11 +11,6 @@ const (
 	defaultEndpoint  = 1 // Endpoint Address
 	debugEndpoint    = 2
 )
-
-type transport struct {
-	conn  io.ReadWriteCloser // primary interface to device
-	debug io.ReadWriteCloser // debug link connection to device if enabled
-}
 
 // webUSBEndpoints holds handles to the input and output interfaces for a webUSB device
 // as well as the configuration for cleaup when done with the device

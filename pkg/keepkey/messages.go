@@ -35,9 +35,9 @@ func (kk *Keepkey) ApplyPolicy(name string, enabled bool) error {
 	return nil
 }
 
-// Initialize assigns a hid connection to this keepkey and send initialize message to device
-func (kk *Keepkey) Initialize(device io.ReadWriteCloser) (*kkProto.Features, error) {
-	kk.device = device
+// Initialize sends initialize message to device forcing the device to its neutral state
+// This should be the first message sent when communicating with a device for the first time
+func (kk *Keepkey) Initialize() (*kkProto.Features, error) {
 
 	features := new(kkProto.Features)
 	if _, err := kk.keepkeyExchange(&kkProto.Initialize{}, features); err != nil {
