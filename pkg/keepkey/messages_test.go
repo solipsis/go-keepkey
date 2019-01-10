@@ -1,14 +1,11 @@
 package keepkey
 
 import (
-	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/solipsis/go-keepkey/pkg/kkProto"
 )
 
 // Device to connect to for testing
@@ -30,7 +27,7 @@ func SeedDevice() {
 func TestMain(m *testing.M) {
 	// Connect to the first connected keepkey then run tests
 	var err error
-	kks, err = GetDevicesWithConfig(&KeepkeyConfig{AutoButton: true})
+	kks, err = GetDevicesWithConfig(&Config{AutoButton: true})
 	if err != nil {
 		log.Fatal("No keepkey detected")
 	}
@@ -41,8 +38,7 @@ func TestMain(m *testing.M) {
 
 func TestLoadDevice(t *testing.T) {
 	kk.WipeDevice()
-	words := "water explain wink differ size gift sort silly collect anger anger yard"
-	if err := kk.LoadDevice(strings.Split(words, " "), "", "", false, true); err != nil {
+	if err := kk.LoadDevice(strings.Split(testSeed, " "), "", "", false, true); err != nil {
 		t.Fatal("Unable to load device from seed words", err)
 	}
 }
