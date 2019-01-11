@@ -3,7 +3,13 @@
 go-keepkey is a client library and CLI for interacting with Keepkey storage devices.  
 This library is unofficial and in development. For the official client see https://github.com/keepkey/python-keepkey
 
+## Dependencies ##
+Since the device has transitioned to communicating over webUSB you need install libusb for your platform
+	
+	brew install libusb
+
 ## Installation ##
+
 
 	go get -u github.com/solipsis/go-keepkey
 	go install github.com/solipsis/go-keepkey
