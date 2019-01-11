@@ -58,10 +58,10 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 		kk := newKeepkeyFromConfig(cfg)
 		kk.transport = dev
 		if dev.debug != nil {
-			go listenForMessages(kk.transport.debug, kk.debugQueue)
+			go listenForMessages(kk.transport.debug, kk.debugQueue, kk.closed)
 			fmt.Println("DebugLink established over WebUSB")
 		}
-		go listenForMessages(kk.transport.conn, kk.deviceQueue)
+		go listenForMessages(kk.transport.conn, kk.deviceQueue, kk.closed)
 
 		// Ping the device and ask for its features
 		features, err := kk.Initialize()
@@ -96,7 +96,7 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 			continue
 		}
 		kk.transport.conn = device
-		go listenForMessages(device, kk.deviceQueue)
+		go listenForMessages(device, kk.deviceQueue, kk.closed)
 
 		// debug HID interface
 		if debugIFace.Path != "" {
@@ -107,7 +107,7 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 			}
 			fmt.Println("Debug link established over HID")
 			kk.transport.debug = debug
-			go listenForMessages(debug, kk.debugQueue)
+			go listenForMessages(debug, kk.debugQueue, kk.closed)
 		}
 
 		// Ping the device and ask for its features
@@ -132,7 +132,7 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 }
 
 // passively listen for messages on a transport interface
-func listenForMessages(in io.Reader, out chan *deviceResponse) {
+func listenForMessages(in io.Reader, out chan *deviceResponse, closed chan struct{}) {
 	for {
 		// stream the reply back in 64 byte chunks
 		chunk := make([]byte, 64)
@@ -141,6 +141,13 @@ func listenForMessages(in io.Reader, out chan *deviceResponse) {
 		for {
 			// Read next chunk
 			if _, err := io.ReadFull(in, chunk); err != nil {
+
+				// Abort if this keepkey has closed its connections
+				select {
+				case <-closed:
+					return
+				default:
+				}
 				fmt.Println(color.RedString("Unable to read chunk from device:", err)) // TODO: move to device specific log
 				break
 			}

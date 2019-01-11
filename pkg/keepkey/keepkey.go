@@ -24,6 +24,7 @@ type Keepkey struct {
 	label, serial, id string // Used for specifying which device to send commands if multiple are connected
 	logger
 	deviceQueue, debugQueue chan *deviceResponse // for subscribing to responses over different interfaces
+	closed                  chan struct{}
 }
 
 // transport contains handles to the primary and debug interfaces of the target device
@@ -93,6 +94,7 @@ func newKeepkeyFromConfig(cfg *Config) *Keepkey {
 	kk.autoButton = cfg.AutoButton
 	kk.deviceQueue = make(chan *deviceResponse, 1)
 	kk.debugQueue = make(chan *deviceResponse, 1)
+	kk.closed = make(chan struct{}, 1)
 
 	return kk
 }
@@ -100,6 +102,7 @@ func newKeepkeyFromConfig(cfg *Config) *Keepkey {
 // Close closes the transport connection and unassoctiates that nterface
 // with the calling Keepkey
 func (kk *Keepkey) Close() {
+	close(kk.closed) // signal message listeners to stop
 	if kk.transport.conn != nil {
 		kk.transport.conn.Close()
 		kk.transport.conn = nil
