@@ -77,9 +77,9 @@ func connectDevice() {
 
 	kks, err := keepkey.GetDevicesWithConfig(&keepkey.Config{Logger: logger, AutoButton: debugButtonPress})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(color.RedString(err.Error()))
 	}
-	fmt.Printf("Connected to %d devices\n", len(kks))
+	fmt.Println(color.GreenString(fmt.Sprintf("Connected to %d devices", len(kks))))
 	for _, d := range kks {
 		str := "  --  "
 		if d.Serial() != "" {
@@ -105,7 +105,7 @@ func connectDevice() {
 				kk = k
 				break
 			}
-			log.Fatal("No keepkey found with given label or serial")
+			log.Fatal(color.RedString("No keepkey found with given label or serial"))
 		}
 	} else {
 		// Connect to the first found keepkey

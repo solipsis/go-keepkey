@@ -10,6 +10,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/golang/protobuf/proto"
 	"github.com/karalabe/hid"
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
@@ -48,7 +49,7 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 		// Swallow output if pid=0001 because this device is probably in HID->webUSB limbo and will
 		// soon be updated
 		if !strings.Contains(err.Error(), "pid=0001") {
-			fmt.Println("Unable to connect to device of webusb, ", err)
+			fmt.Println(color.RedString("Unable to connect to device of webusb, ", err))
 		}
 	}
 
@@ -65,7 +66,7 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 		// Ping the device and ask for its features
 		features, err := kk.Initialize()
 		if err != nil {
-			fmt.Println("Device failed to respond to initial request, dropping: ", err)
+			fmt.Println(color.RedString("Device failed to respond to initial request, dropping: " + err.Error()))
 			continue
 		}
 
@@ -112,7 +113,7 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 		// Ping the device and ask for its features
 		features, err := kk.Initialize()
 		if err != nil {
-			fmt.Println("Device failed to respond to initial request, dropping: ", err)
+			fmt.Println(color.RedString("Device failed to respond to initial request, dropping: " + err.Error()))
 			continue
 		}
 
@@ -140,7 +141,7 @@ func listenForMessages(in io.Reader, out chan *deviceResponse) {
 		for {
 			// Read next chunk
 			if _, err := io.ReadFull(in, chunk); err != nil {
-				fmt.Println("Unable to read chunk from device:", err) // TODO: move to device specific log
+				fmt.Println(color.RedString("Unable to read chunk from device:", err)) // TODO: move to device specific log
 				break
 			}
 
@@ -338,17 +339,4 @@ func isDebugMessage(req interface{}) bool {
 		return true
 	}
 	return false
-}
-
-// Close closes the transport connection and unassoctiates that nterface
-// with the calling Keepkey
-func (kk *Keepkey) Close() {
-	if kk.transport.conn != nil {
-		kk.transport.conn.Close()
-		kk.transport.conn = nil
-	}
-	if kk.transport.debug != nil {
-		kk.transport.debug.Close()
-		kk.transport.debug = nil
-	}
 }

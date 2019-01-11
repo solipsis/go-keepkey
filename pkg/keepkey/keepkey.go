@@ -96,3 +96,16 @@ func newKeepkeyFromConfig(cfg *Config) *Keepkey {
 
 	return kk
 }
+
+// Close closes the transport connection and unassoctiates that nterface
+// with the calling Keepkey
+func (kk *Keepkey) Close() {
+	if kk.transport.conn != nil {
+		kk.transport.conn.Close()
+		kk.transport.conn = nil
+	}
+	if kk.transport.debug != nil {
+		kk.transport.debug.Close()
+		kk.transport.debug = nil
+	}
+}
