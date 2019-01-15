@@ -53,6 +53,35 @@ func promptPin() (string, error) {
 	return res, nil
 }
 
+// Prompt the user for the next word during the legacy seed recovery process
+func promptWord() (string, error) {
+
+	// Input validation function
+	validate := func(input string) error {
+		if len(input) < 1 {
+			return errors.New("Input must be a valid bip39 word")
+		}
+		return nil
+	}
+
+	// Pretty colors for prompt
+	green := color.New(color.FgGreen).Add(color.Underline).Add(color.Bold).SprintFunc()
+
+	text := green(fmt.Sprintf("Look at your device to determine the next word to enter "))
+	prompt := promptui.Prompt{
+		Label:    text,
+		Validate: validate,
+	}
+
+	// Get input from user
+	result, err := prompt.Run()
+	if err != nil {
+		return "", err
+	}
+
+	return result, nil
+}
+
 // Prompt the user for the next character during the seed recovery process
 func promptCharacter(word, char uint32) (string, error) {
 

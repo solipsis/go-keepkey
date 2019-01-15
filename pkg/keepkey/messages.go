@@ -238,15 +238,56 @@ func (kk *Keepkey) recoverDeviceRaw(numWords uint32, enforceWordlist bool) error
 // the words in a random order. This method must be called on an uninitialized device
 // Raw Mode provides a superior user experience but may not be available in all shell environments
 func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordList, useCharacterCipher, rawMode bool) error {
+	if !useCharacterCipher {
+		return kk.recoverDevicePromptLegacy(numWords, enforceWordList)
+	}
 	if rawMode {
 		return kk.recoverDeviceRaw(numWords, enforceWordList)
 	}
-	return kk.recoverDevicePrompt(numWords, enforceWordList, useCharacterCipher)
+	return kk.recoverDevicePrompt(numWords, enforceWordList)
+}
+
+// Recovery mode in which you enter your seed in a random order mixed with fake words
+// It is recommended that you use the character cipher when available as this method of recovery would
+// allow an evesdropper to learn your seed words but not the correct order
+func (kk *Keepkey) recoverDevicePromptLegacy(numWords uint32, enforceWordlist bool) error {
+
+	useCharacterCipher := false
+	recover := &kkProto.RecoveryDevice{
+		WordCount:          &numWords,
+		EnforceWordlist:    &enforceWordlist,
+		UseCharacterCipher: &useCharacterCipher,
+	}
+
+	// start the recovery process
+	req := new(kkProto.WordRequest)
+	if _, err := kk.keepkeyExchange(recover, req); err != nil {
+		return err
+	}
+
+	// Prompt words until we have entered the desired number
+	var wordNum uint32
+	for wordNum < 24 {
+		w, err := promptWord()
+		if err != nil {
+			return err
+		}
+
+		// Send the word to the device
+		req = new(kkProto.WordRequest)
+		if _, err := kk.keepkeyExchange(&kkProto.WordAck{Word: &w}, req); err != nil {
+			return err
+		}
+		wordNum++
+	}
+
+	return nil
 }
 
 // Recovery process that repeatedly prompts the user for each character
-func (kk *Keepkey) recoverDevicePrompt(numWords uint32, enforceWordlist, useCharacterCipher bool) error {
+func (kk *Keepkey) recoverDevicePrompt(numWords uint32, enforceWordlist bool) error {
 
+	useCharacterCipher := true
 	recover := &kkProto.RecoveryDevice{
 		WordCount:          &numWords,
 		EnforceWordlist:    &enforceWordlist,
