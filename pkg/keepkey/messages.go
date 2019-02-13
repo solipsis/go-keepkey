@@ -480,6 +480,7 @@ const (
 // The device entropy strength must be 128, 192, or 256
 func (kk *Keepkey) ResetDevice(strength entropyStrength, addtlEntropy []byte, showRandom, passphrase, pin bool, label string, wordsPerScreen uint32) error {
 
+	language := "english"
 	deviceEntropyStrength := uint32(strength)
 	reset := &kkProto.ResetDevice{
 		Strength:             &deviceEntropyStrength,
@@ -487,6 +488,7 @@ func (kk *Keepkey) ResetDevice(strength entropyStrength, addtlEntropy []byte, sh
 		PassphraseProtection: &passphrase,
 		PinProtection:        &pin,
 		Label:                &label,
+		Language:             &language,
 	}
 	if _, err := kk.keepkeyExchange(reset, &kkProto.EntropyRequest{}); err != nil {
 		return err
@@ -694,6 +696,19 @@ func (kk *Keepkey) FlashHash(address, challenge []byte, length uint32) ([]byte, 
 		return []byte{}, err
 	}
 	return hash.GetData(), nil
+}
+
+// DebugLinkGetState returns a variety of device debugging information including SECRETS
+// and should never be used in conjunction with a seed that contains funds.
+// This method can only be called on a device with debug enabled firmware
+func (kk *Keepkey) DebugLinkGetState() (*kkProto.DebugLinkState, error) {
+
+	debug := new(kkProto.DebugLinkGetState)
+	state := new(kkProto.DebugLinkState)
+	if _, err := kk.keepkeyExchange(debug, state); err != nil {
+		return nil, err
+	}
+	return state, nil
 }
 
 // EthereumGetAddress returns the ethereum address associated with the given node path
