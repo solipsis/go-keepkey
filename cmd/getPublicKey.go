@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/hex"
 	"fmt"
 	"os"
 
