@@ -13,27 +13,29 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-var test = `{"message_type":"EthereumSignTx","date":1550076468947,"message_enum":58,"message":{"addressNList":[2147483692,2147483708,2147483648,0,0],"nonce":"","gasPrice":"AVIabww=","gasLimit":"1PA=","to":"DYd19khDBnmnCemNKwy2JQ0oh+8=","value":"","dataInitialChunk":"qQWcuwAAAAAAAAAAAAAAAMU9lQ1zMBVO4yP8GfveHNZ5z763AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB29k+rNWL/AA=","dataLength":68,"toAddressNList":[],"addressType":3,"exchangeType":{"signedExchangeResponse":{"signature":"INyh1gt2zHXevVDuGDB8nYW2EH7mNDH7Ef0Qt1QD51ECXgkvyok+64dvHJSkVavoxwkjNH4neS+qfbbqKXTHuoQ=","responsev2":{"depositAddress":{"coinType":"bat","address":"0xc53d950d7330154ee323fc19fbde1cd679cfbeb7"},"depositAmount":"AdvZPqzVi/wA","expiration":1550077155180,"quotedRate":"BHUM45OVQAA=","withdrawalAddress":{"coinType":"ant","address":"0xbd5ffd40d55e9aee88a19f2340de40cadc60fc18"},"withdrawalAmount":"fuuj39He1AA=","returnAddress":{"coinType":"bat","address":"0xbd5ffd40d55e9aee88a19f2340de40cadc60fc18"},"apiKey":"atWDG3eEhLuEnaRRgKw1BHhI5crA+mZkVPT/eLjHOZ/qaozix+5ih7zXjbZhDKP1ONaz6QyoDI5jaLYCFEWVCw==","minerFee":"GelFjsQhwAA=","orderId":"Zw+8Oo1rRSykADwvwIrZAg=="}},"withdrawalCoinName":"ANT","withdrawalAddressNList":[2147483692,2147483708,2147483648,0,0],"returnAddressNList":[2147483692,2147483708,2147483648,0,0]},"chainId":1,"tokenValue":"","tokenTo":""},"from_device":false,"interface":"StandardWebUSB"}`
-
 // Record blalahoeushtouthoesaut
 type Record struct {
 	Messages []LogMsg `json:"messages"`
 }
 
 type LogMsg struct {
-	Type string           `json:"message_type"`
-	Msg  *json.RawMessage `json:"message"`
+	Type       string           `json:"message_type"`
+	FromDevice bool             `json:"from_device"`
+	Msg        *json.RawMessage `json:"message"`
 }
 
-//func Replay(kk *Keepkey, l []byte) {
-//replay(
-//}
-
+// Replay plays a list of messages back to the device
+//
 func Replay(kk *Keepkey, r Record) {
 
 	for _, msg := range r.Messages {
 
 		if msg.Type == "" {
+			continue
+		}
+
+		// TODO: implement validating received responses against what was previously received
+		if msg.FromDevice {
 			continue
 		}
 
@@ -47,11 +49,8 @@ func Replay(kk *Keepkey, r Record) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println("sent")
 
-		suc := new(kkProto.Success)
-		fmt.Println("Receiving")
-		err = kk.ReceiveRaw(suc)
+		_, err = kk.ReceiveRaw()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -59,49 +58,6 @@ func Replay(kk *Keepkey, r Record) {
 	}
 
 }
-
-// Replay blah
-// TODO: make bidirectional
-/*
-func Replay(kk *Keepkey, r io.Reader) {
-
-	fmt.Println("Replay")
-	sc := bufio.NewScanner(r)
-	for sc.Scan() {
-
-		lm := &logMsg{}
-		json.Unmarshal([]byte(sc.Text()), &lm)
-		if lm.Type == "" {
-			continue
-		}
-
-		// Attempt to reflectively instantiate protobuf
-		proto, err := reflectJSON(lm.Type, []byte(*lm.Msg))
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = kk.SendRaw(proto)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println("sent")
-
-		suc := new(kkProto.Success)
-		fmt.Println("Receiving")
-		err = kk.ReceiveRaw(suc)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-	}
-
-	// We got an error other than EOF
-	if sc.Err() != nil {
-		log.Fatal(sc.Err())
-	}
-}
-*/
 
 // reflectJSON attempts to unmarshal a given json string into
 // a reflected proto.Message using the typeName and typeRegistry
@@ -111,7 +67,6 @@ func reflectJSON(typeName string, body []byte) (proto.Message, error) {
 		return &kkProto.Ping{}, fmt.Errorf("No type with name %s found in TypeRegistry", typeName)
 	}
 
-	fmt.Println("Fetched Type: ", t)
 	p := reflect.New(t).Interface()
 
 	pr, ok := p.(proto.Message)
@@ -125,7 +80,6 @@ func reflectJSON(typeName string, body []byte) (proto.Message, error) {
 	if err != nil {
 		return &kkProto.Ping{}, fmt.Errorf("Unable to unmarshal parsed json:\n%s into type %s, With error: %s", body, typeName, err.Error())
 	}
-	fmt.Printf("PROTO: %T %+v\n", pr, pr)
 
 	return pr, nil
 }

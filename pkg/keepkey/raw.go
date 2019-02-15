@@ -3,6 +3,8 @@ package keepkey
 import (
 	"encoding/binary"
 	"fmt"
+	"reflect"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
@@ -47,10 +49,9 @@ func (kk *Keepkey) SendRaw(req proto.Message) error {
 	return nil
 }
 
-// ReceiveRaw receives a message from the device but does not take any additional actions based on the recieved message
-// This is useful for recreating a previous exchange with the device
-// TODO; make consistent with how debug/normal messages are handled in keepkeyExchange
-func (kk *Keepkey) ReceiveRaw(result proto.Message) error {
+// ReceiveRaw receives a message from the device but does not take any additional actions based on
+// the recieved message. This is useful for recreating a previous exchange with the device
+func (kk *Keepkey) ReceiveRaw() (proto.Message, error) {
 
 	response := <-kk.deviceQueue
 	kind := response.kind
@@ -62,19 +63,29 @@ func (kk *Keepkey) ReceiveRaw(result proto.Message) error {
 		// keepkey returned a failure, extract and return the message
 		failure := new(kkProto.Failure)
 		if err := proto.Unmarshal(reply, failure); err != nil {
-			return err
+			return &kkProto.Failure{}, err
 		}
-		return fmt.Errorf("keepkey: %s", failure.GetMessage())
+		return failure, fmt.Errorf("keepkey: %s", failure.GetMessage())
 	}
 
-	fmt.Println("kind", kind)
+	// reflectively instiate the appropriate type
+	typeName := strings.TrimPrefix(kkProto.Name(kind), "MessageType_")
+	t, ok := kkProto.TypeRegistry(typeName)
+	if !ok {
+		return &kkProto.Failure{}, fmt.Errorf("No type with name %s found in TypeRegistry", typeName)
+	}
+	p := reflect.New(t).Interface()
+	pr, ok := p.(proto.Message)
+	if !ok {
+		return &kkProto.Failure{}, fmt.Errorf("Reflected type does not implement proto.Message")
+	}
 
 	// If the reply we got can be marshaled into our expected result marshal it
-	if kkProto.Type(result) == kind {
-		err := proto.Unmarshal(reply, result)
-		kk.log("Recieved message from device:\n%s:\n%s", kkProto.Name(kkProto.Type(result)), pretty(result))
-		return err
+	if kkProto.Type(pr) == kind {
+		err := proto.Unmarshal(reply, pr)
+		kk.log("Recieved message from device:\n%s:\n%s", kkProto.Name(kkProto.Type(pr)), pretty(pr))
+		return &kkProto.Failure{}, err
 	}
 
-	return fmt.Errorf("keepkey: expected reply type %s, got %s", kkProto.Name(kkProto.Type(result)), kkProto.Name(kind))
+	return &kkProto.Failure{}, fmt.Errorf("keepkey: expected reply type %s, got %s", kkProto.Name(kkProto.Type(pr)), kkProto.Name(kind))
 }

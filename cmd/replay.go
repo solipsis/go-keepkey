@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"log"
 
 	"github.com/solipsis/go-keepkey/pkg/keepkey"
@@ -39,6 +40,24 @@ var replayCmd = &cobra.Command{
 
 			rec := keepkey.Record{Messages: []keepkey.LogMsg{lm}}
 			keepkey.Replay(kk, rec)
+			return
+		}
+
+		if logFile != "" {
+
+			buf, err := ioutil.ReadFile(logFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			r := keepkey.Record{}
+			json.Unmarshal(buf, &r)
+
+			if len(r.Messages) == 0 {
+				log.Fatal("Unable to parse messages, Validate that they are in valid JSON format")
+			}
+
+			keepkey.Replay(kk, r)
 		}
 
 	},
