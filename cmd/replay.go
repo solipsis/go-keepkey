@@ -38,8 +38,8 @@ var replayCmd = &cobra.Command{
 			lm := keepkey.LogMsg{}
 			json.Unmarshal([]byte(single), &lm)
 
-			rec := keepkey.Record{Messages: []keepkey.LogMsg{lm}}
-			keepkey.Replay(kk, rec)
+			replay := keepkey.Replay{Messages: []keepkey.LogMsg{lm}}
+			replay.Play(kk)
 			return
 		}
 
@@ -50,14 +50,14 @@ var replayCmd = &cobra.Command{
 				log.Fatal(err)
 			}
 
-			r := keepkey.Record{}
-			json.Unmarshal(buf, &r)
+			replay := keepkey.Replay{}
+			json.Unmarshal(buf, &replay)
 
-			if len(r.Messages) == 0 {
+			if len(replay.Messages) == 0 {
 				log.Fatal("Unable to parse messages, Validate that they are in valid JSON format")
 			}
 
-			keepkey.Replay(kk, r)
+			replay.Play(kk)
 		}
 
 	},

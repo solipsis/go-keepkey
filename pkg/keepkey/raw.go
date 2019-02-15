@@ -3,6 +3,7 @@ package keepkey
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 
@@ -12,7 +13,8 @@ import (
 
 // SendRaw sends a message to the device without waiting for a response
 // This is useful for recreating previous exchanges with the device
-func (kk *Keepkey) SendRaw(req proto.Message) error {
+// The debug flag specifies wether to send over the standard or debug interface
+func (kk *Keepkey) SendRaw(req proto.Message, transportIface io.Writer) error {
 	kk.log("Sending payload to device:\n%s:\n%s", kkProto.Name(kkProto.Type(req)), pretty(req))
 
 	// Construct message payload to chunk up
@@ -40,9 +42,8 @@ func (kk *Keepkey) SendRaw(req proto.Message) error {
 			copy(chunk[1+len(payload):], make([]byte, 63-len(payload)))
 			payload = nil
 		}
-		// send over to the device
-		// TODO: add ability for debuglikn
-		if _, err := kk.transport.conn.Write(chunk); err != nil {
+
+		if _, err := transportIface.Write(chunk); err != nil {
 			return err
 		}
 	}

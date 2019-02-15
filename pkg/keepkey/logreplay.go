@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"reflect"
+	"strings"
 
 	"github.com/solipsis/go-keepkey/pkg/kkProto"
 
@@ -13,20 +15,21 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-// Record blalahoeushtouthoesaut
-type Record struct {
+// Replay is a collection of log messages to play against the device
+type Replay struct {
 	Messages []LogMsg `json:"messages"`
 }
 
+// LogMsg is a message sent to or from the device conforming to the keepkey log spec
 type LogMsg struct {
 	Type       string           `json:"message_type"`
+	Interface  string           `json:"interface"` // TODO: should probably make this an enum
 	FromDevice bool             `json:"from_device"`
 	Msg        *json.RawMessage `json:"message"`
 }
 
 // Replay plays a list of messages back to the device
-//
-func Replay(kk *Keepkey, r Record) {
+func (r *Replay) Play(kk *Keepkey) {
 
 	for _, msg := range r.Messages {
 
@@ -45,9 +48,23 @@ func Replay(kk *Keepkey, r Record) {
 			log.Fatal(err)
 		}
 
-		err = kk.SendRaw(proto)
+		// determine interface to send over (standard vs. debug)
+		debug := strings.Contains(strings.ToLower(msg.Interface), "debug")
+		var transportIface io.ReadWriteCloser
+		if debug {
+			transportIface = kk.transport.debug
+		} else {
+			transportIface = kk.transport.conn
+		}
+
+		err = kk.SendRaw(proto, transportIface)
 		if err != nil {
 			log.Fatal(err)
+		}
+
+		// If we send a debug button press then there is no response from device
+		if debug && msg.Type == "DebugLinkDecision" {
+			continue
 		}
 
 		_, err = kk.ReceiveRaw()
