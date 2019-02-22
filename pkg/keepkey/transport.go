@@ -49,7 +49,7 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 		// Swallow output if pid=0001 because this device is probably in HID->webUSB limbo and will
 		// soon be updated
 		if !strings.Contains(err.Error(), "pid=0001") {
-			fmt.Println(color.RedString("Unable to connect to device of webusb, ", err))
+			fmt.Println(color.RedString("Unable to connect to webusb device. Make sure no other processes are currently connected to the device"), err)
 		}
 	}
 
