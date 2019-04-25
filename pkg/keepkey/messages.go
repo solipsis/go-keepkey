@@ -133,7 +133,7 @@ func (kk *Keepkey) VerifyMessage(addr, coinName string, msg, sig []byte) error {
 
 // Recovery process that consumes each input as it is typed providing
 // a better user experience than the prompt version
-func (kk *Keepkey) recoverDeviceRaw(numWords uint32, dryRun bool, enforceWordlist bool) error {
+func (kk *Keepkey) recoverDeviceRaw(numWords uint32, dryRun, enforceWordlist bool) error {
 
 	// TODO: stylings in seperate file?
 	cyan := color.New(color.FgCyan).Add(color.Bold).SprintFunc()
@@ -238,7 +238,7 @@ func (kk *Keepkey) recoverDeviceRaw(numWords uint32, dryRun bool, enforceWordlis
 // The useCharacterCipher flag tells the device to recover using the on-screen cypher or through entering
 // the words in a random order. This method must be called on an uninitialized device
 // Raw Mode provides a superior user experience but may not be available in all shell environments
-func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordList, dryRun bool, useCharacterCipher, rawMode bool) error {
+func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordList, dryRun, useCharacterCipher, rawMode bool) error {
 	if !useCharacterCipher {
 		return kk.recoverDevicePromptLegacy(numWords, dryRun, enforceWordList)
 	}
@@ -251,7 +251,7 @@ func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordList, dryRun bool, 
 // Recovery mode in which you enter your seed in a random order mixed with fake words
 // It is recommended that you use the character cipher when available as this method of recovery would
 // allow an evesdropper to learn your seed words but not the correct order
-func (kk *Keepkey) recoverDevicePromptLegacy(numWords uint32, dryRun bool, enforceWordlist bool) error {
+func (kk *Keepkey) recoverDevicePromptLegacy(numWords uint32, dryRun, enforceWordlist bool) error {
 
 	useCharacterCipher := false
 	recover := &kkProto.RecoveryDevice{
@@ -287,7 +287,7 @@ func (kk *Keepkey) recoverDevicePromptLegacy(numWords uint32, dryRun bool, enfor
 }
 
 // Recovery process that repeatedly prompts the user for each character
-func (kk *Keepkey) recoverDevicePrompt(numWords uint32, dryRun bool, enforceWordlist bool) error {
+func (kk *Keepkey) recoverDevicePrompt(numWords uint32, dryRun, enforceWordlist bool) error {
 
 	useCharacterCipher := true
 	recover := &kkProto.RecoveryDevice{
