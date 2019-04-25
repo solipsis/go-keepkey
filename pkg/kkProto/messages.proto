@@ -30,7 +30,7 @@ enum MessageType {
 	MessageType_LoadDevice = 13 [(wire_in) = true];
 	MessageType_ResetDevice = 14 [(wire_in) = true];
 	MessageType_SignTx = 15 [(wire_in) = true];
-	MessageType_SimpleSignTx = 16 [(wire_in) = true];
+	// Formerly SimpleSignTx = 16
 	MessageType_Features = 17 [(wire_out) = true];
 	MessageType_PinMatrixRequest = 18 [(wire_out) = true];
 	MessageType_PinMatrixAck = 19 [(wire_in) = true];
@@ -79,7 +79,6 @@ enum MessageType {
 	MessageType_DebugLinkFlashDump = 87 [(wire_debug_in) = true];
 	MessageType_DebugLinkFlashDumpResponse = 88 [(wire_debug_out) = true];
 	MessageType_SoftReset = 89 [(wire_debug_in) = true];
-	MessageType_DebugLinkInfo = 90 [(wire_debug_out) = true];
 	MessageType_DebugLinkDecision = 100 [(wire_debug_in) = true];
 	MessageType_DebugLinkGetState = 101 [(wire_debug_in) = true];
 	MessageType_DebugLinkState = 102 [(wire_debug_out) = true];
@@ -88,6 +87,23 @@ enum MessageType {
 	MessageType_DebugLinkFillConfig = 105 [(wire_debug_out) = true];
 	MessageType_GetCoinTable = 106 [(wire_in) = true];
 	MessageType_CoinTable = 107 [(wire_out) = true];
+	MessageType_EthereumSignMessage = 108 [(wire_in) = true];
+	MessageType_EthereumVerifyMessage = 109 [(wire_in) = true];
+	MessageType_EthereumMessageSignature = 110 [(wire_out) = true];
+
+	// EOS
+	MessageType_EosGetPublicKey = 600 [(wire_in) = true];
+	MessageType_EosPublicKey = 601 [(wire_out) = true];
+	MessageType_EosSignTx = 602 [(wire_in) = true];
+	MessageType_EosTxActionRequest = 603 [(wire_out) = true];
+	MessageType_EosTxActionAck = 604 [(wire_in) = true];
+	MessageType_EosSignedTx = 605 [(wire_out) = true];
+
+	// Nano
+	MessageType_NanoGetAddress = 700 [(wire_in) = true];
+	MessageType_NanoAddress = 701 [(wire_out) = true];
+	MessageType_NanoSignTx = 702 [(wire_in) = true];
+	MessageType_NanoSignedTx = 703 [(wire_out) = true];
 }
 
 ////////////////////
@@ -135,6 +151,7 @@ message Features {
 	optional string model = 21;			// device hardware model
 	optional string firmware_variant = 22; // Firmware variant
 	optional bytes firmware_hash = 23;		// double sha256 hash of the firmware
+	optional bool no_backup = 24;			// Device was initialized without displaying recovery sentence.
 }
 
 /**
@@ -174,6 +191,8 @@ message ApplySettings {
 	optional string language = 1;
 	optional string label = 2;
 	optional bool use_passphrase = 3;
+	optional uint32 auto_lock_delay_ms = 4;
+	optional uint32 u2f_counter = 5;
 }
 
 /**
@@ -298,6 +317,8 @@ message GetPublicKey {
 	repeated uint32 address_n = 1;		// BIP-32 path to derive the key from master node
 	optional string ecdsa_curve_name = 2;	// ECDSA curve name to use
 	optional bool show_display = 3;		// optionally show on display before sending the result
+	optional string coin_name = 4 [default='Bitcoin'];
+	optional InputScriptType script_type = 5 [default=SPENDADDRESS];	// used to distinguish between various address formats (non-segwit, segwit, etc.)
 }
 
 /**
@@ -316,11 +337,11 @@ message PublicKey {
  * @next Failure
  */
 message GetAddress {
-	repeated uint32 address_n = 1;			// BIP-32 path to derive the key from master node
+	repeated uint32 address_n = 1;						// BIP-32 path to derive the key from master node
 	optional string coin_name = 2 [default='Bitcoin'];
-	optional bool show_display = 3;			// optionally show on display before sending the result
-	optional MultisigRedeemScriptType multisig = 4;	// Filled if we are showing a multisig address
-	optional InputScriptType script_type = 5 [default=SPENDADDRESS];	// Used to distinguish segwit addresses
+	optional bool show_display = 3			;			// optionally show on display before sending the result
+	optional MultisigRedeemScriptType multisig = 4;				// filled if we are showing a multisig address
+	optional InputScriptType script_type = 5 [default=SPENDADDRESS];	// used to distinguish between various address formats (non-segwit, segwit, etc.)
 }
 
 /**
@@ -348,6 +369,7 @@ message Address {
  */
 message EthereumAddress {
 	required bytes address = 1;		// Coin address as an Ethereum 160 bit hash
+	optional string address_str = 2;
 }
 
 /**
@@ -371,6 +393,7 @@ message LoadDevice {
 	optional string language = 5 [default='english'];	// device language
 	optional string label = 6;				// device label
 	optional bool skip_checksum = 7;			// do not test mnemonic for valid BIP-39 checksum
+	optional uint32 u2f_counter = 8;			// U2F Counter
 }
 
 /**
@@ -385,6 +408,9 @@ message ResetDevice {
 	optional bool pin_protection = 4;			// enable PIN protection
 	optional string language = 5 [default='english'];	// device language
 	optional string label = 6;				// device label
+	optional bool no_backup = 7;			// Initialize without ever showing the recovery sentence.
+	optional uint32 auto_lock_delay_ms = 8;	// Screensaver Timeout
+	optional uint32 u2f_counter = 9; // U2F Counter
 }
 
 /**
@@ -417,6 +443,9 @@ message RecoveryDevice {
 	optional string label = 5;				// device label
 	optional bool enforce_wordlist = 6;			// enforce BIP-39 wordlist during the process
 	optional bool use_character_cipher = 7;			// an optional way to input recovery sentence by character using a cipher
+	optional uint32 auto_lock_delay_ms = 8;	// Screensaver Timeout
+	optional uint32 u2f_counter = 9; // U2F Counter
+	optional bool dry_run = 10; // perform dry-run recovery workflow (for safe mnemonic validation)
 }
 
 /**
@@ -472,9 +501,10 @@ message CharacterAck {
  * @next Failure
  */
 message SignMessage {
-	repeated uint32 address_n = 1;				// BIP-32 path to derive the key from master node
-	required bytes message = 2;				// message to be signed
-	optional string coin_name = 3 [default='Bitcoin'];	// coin to use for signing
+	repeated uint32 address_n = 1;						// BIP-32 path to derive the key from master node
+	required bytes message = 2;						// message to be signed
+	optional string coin_name = 3 [default='Bitcoin'];			// coin to use for signing
+	optional InputScriptType script_type = 4 [default=SPENDADDRESS];	// used to distinguish between various address formats (non-segwit, segwit, etc.)
 }
 
 /**
@@ -574,7 +604,7 @@ message CipheredKeyValue {
 //////////////////////////////////
 
 /**
- * Request:  Estimated size of the transaction
+ * Request: Estimated size of the transaction
  * This behaves exactly like SignTx, which means that it can ask using TxRequest
  * This call is non-blocking (except possible PassphraseRequest to unlock the seed)
  * @next TxSize
@@ -607,24 +637,10 @@ message SignTx {
 	optional string coin_name = 3 [default='Bitcoin'];	// coin to use
 	optional uint32 version = 4 [default=1];		// transaction version
 	optional uint32 lock_time = 5 [default=0];		// transaction lock_time
-}
-
-/**
- * Request: Simplified transaction signing
- * This method doesn't support streaming, so there are hardware limits in number of inputs and outputs.
- * In case of success, the result is returned using TxRequest message.
- * @next PassphraseRequest
- * @next PinMatrixRequest
- * @next TxRequest
- * @next Failure
- */
-message SimpleSignTx {
-	repeated TxInputType inputs = 1;			// transaction inputs
-	repeated TxOutputType outputs = 2;			// transaction outputs
-	repeated TransactionType transactions = 3;		// transactions whose outputs are used to build current inputs
-	optional string coin_name = 4 [default='Bitcoin'];	// coin to use
-	optional uint32 version = 5 [default=1];		// transaction version
-	optional uint32 lock_time = 6 [default=0];		// transaction lock_time
+	optional uint32 expiry = 6;						// only for Decred and Zcash
+	optional bool overwintered = 7;					// only for Zcash
+	optional uint32 version_group_id = 8;			// only for Zcash, nVersionGroupId when overwintered is set
+	optional uint32 branch_id = 10;					// only for Zcash, BRANCH_ID when overwintered is set
 }
 
 /**
@@ -632,7 +648,6 @@ message SimpleSignTx {
  * If request_index is set, device awaits TxAck message (with fields filled in according to request_type)
  * If signature_index is set, 'signature' contains signed input of signature_index's input
  * @prev SignTx
- * @prev SimpleSignTx
  * @prev TxAck
  */
 message TxRequest {
@@ -684,6 +699,7 @@ message EthereumSignTx {
 	optional bytes token_value = 100;		// How many tokens to send
 	optional bytes  token_to = 101;			// 160 bit address hash to send tokens to
 	optional string token_shortcut = 102; 		// 3 or 4 character token identifier
+	optional uint32 tx_type = 103;		// (only for Wanchain)
 }
 
 /**
@@ -709,6 +725,40 @@ message EthereumTxRequest {
  */
 message EthereumTxAck {
 	optional bytes data_chunk = 1;			// Bytes from transaction payload (<= 1024 bytes)
+}
+
+////////////////////////////////////////
+// Ethereum: Message signing messages //
+////////////////////////////////////////
+
+/**
+ * Request: Ask device to sign message
+ * @next EthereumMessageSignature
+ * @next Failure
+ */
+message EthereumSignMessage {
+	repeated uint32 address_n = 1;				// BIP-32 path to derive the key from master node
+	required bytes message = 2;				// message to be signed
+}
+
+/**
+ * Request: Ask device to verify message
+ * @next Success
+ * @next Failure
+ */
+message EthereumVerifyMessage {
+	optional bytes address = 1;				// address to verify
+	optional bytes signature = 2;				// signature to verify
+	optional bytes message = 3;				// message to verify
+}
+
+/**
+ * Response: Signed message
+ * @prev EthereumSignMessage
+ */
+message EthereumMessageSignature {
+	optional bytes address = 1;				// address used to sign the message
+	optional bytes signature = 2;				// signature of the message
 }
 
 ///////////////////////
@@ -892,11 +942,4 @@ message DebugLinkLog {
  * Request: Ask device to fill config area with sample data (used for testing firmware upload)
  */
 message DebugLinkFillConfig {
-}
-
-/**
-* Response: Device sending Info logging that should be consumed passively
-*/
-message DebugLinkInfo {
-	optional string msg = 1;
 }
