@@ -38,6 +38,7 @@ enum FailureType {
 	Failure_Other = 9;
 	Failure_NotEnoughFunds = 10;
 	Failure_NotInitialized = 11;
+	Failure_PinMismatch = 12;
 	Failure_FirmwareError = 99;
 }
 
@@ -124,6 +125,11 @@ enum ButtonRequestType {
 	ButtonRequest_SignMessage = 28;
 	ButtonRequest_ApplyPolicies = 29;
 	ButtonRequest_SignExchange = 30;
+	ButtonRequest_AutoLockDelayMs = 31;
+	ButtonRequest_U2FCounter = 32;
+	ButtonRequest_ConfirmEosAction = 33;
+	ButtonRequest_ConfirmEosBudget = 34;
+	ButtonRequest_ConfirmMemo = 35;
 }
 
 /**
@@ -168,14 +174,26 @@ message CoinType {
 	optional uint32 address_type = 3 [default=0];
 	optional uint64 maxfee_kb = 4;
 	optional uint32 address_type_p2sh = 5 [default=5];
-	optional uint32 address_type_p2wpkh = 6 [default=6];
-	optional uint32 address_type_p2wsh = 7 [default=10];
+	//optional uint32 address_type_p2wpkh = 6 [default=6]; REMOVED
+	//optional uint32 address_type_p2wsh = 7 [default=10]; REMOVED
 	optional string signed_message_header = 8;
 	optional uint32 bip44_account_path = 9;
 	optional uint32 forkid = 12;
 	optional uint32 decimals = 13;
 	optional bytes contract_address = 14;
-	optional bytes gas_limit = 15;
+	//optional bytes gas_limit = 15; REMOVED
+	optional uint32 xpub_magic = 16 [default=76067358];
+	//optional uint32 xprv_magic = 17 [default=76066276]; REMOVED
+	optional bool segwit = 18;
+	optional bool force_bip143 = 19;
+	optional string curve_name = 20;
+	optional string cashaddr_prefix = 21;
+	optional string bech32_prefix = 22;
+	optional bool decred = 23;
+	// optional uint32 version_group_id = 24; REMOVED
+	optional uint32 xpub_magic_segwit_p2sh = 25;
+	optional uint32 xpub_magic_segwit_native = 26;
+	optional string nanoaddr_prefix = 27;
 }
 
 /**
@@ -190,7 +208,6 @@ message MultisigRedeemScriptType {
 
 /**
  * Structure representing transaction input
- * @used_in SimpleSignTx
  * @used_in TransactionType
  */
 message TxInputType {
@@ -202,11 +219,12 @@ message TxInputType {
 	optional InputScriptType script_type = 6 [default=SPENDADDRESS];	// defines template of input script
 	optional MultisigRedeemScriptType multisig = 7;				// Filled if input is going to spend multisig tx
 	optional uint64 amount = 8;	  	     				// amount of previous transaction output (for segwit only)
+	optional uint32 decred_tree = 9;
+	optional uint32 decred_script_version = 10;
 }
 
 /**
  * Structure representing transaction output
- * @used_in SimpleSignTx
  * @used_in TransactionType
  */
 message TxOutputType {
@@ -218,6 +236,7 @@ message TxOutputType {
 	optional bytes op_return_data = 6;		    	// defines op_return data; script_type must be PAYTOOPRETURN, amount must be 0
 	optional OutputAddressType address_type = 7;	// output address type 
 	optional ExchangeType exchange_type = 8;		// exchange type data        
+	optional uint32 decred_script_version = 9;
 }
 
 /**
@@ -227,11 +246,11 @@ message TxOutputType {
 message TxOutputBinType {
 	required uint64 amount = 1;
 	required bytes script_pubkey = 2;
+	optional uint32 decred_script_version = 3;
 }
 
 /**
  * Structure representing transaction
- * @used_in SimpleSignTx, 
  */
 message TransactionType {
 	optional uint32 version = 1;
@@ -241,8 +260,12 @@ message TransactionType {
 	optional uint32 lock_time = 4;
 	optional uint32 inputs_cnt = 6;
 	optional uint32 outputs_cnt = 7;
-	optional bytes extra_data = 8;
-	optional uint32 extra_data_len = 9;
+	optional bytes extra_data = 8;         // only for Zcash
+	optional uint32 extra_data_len = 9;    // only for Zcash
+	optional uint32 expiry = 10;           // only for Decred, and Zcash
+	optional bool overwintered = 11;       // only for Zcash
+	optional uint32 version_group_id = 12; // only for Zcash, nVersionGroupId when overwintered is set
+	optional uint32 branch_id = 13;        // only for Zcash, BRANCH_ID when overwintered is set
 }
 
 /**
