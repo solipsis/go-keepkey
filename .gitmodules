@@ -1,0 +1,3 @@
+[submodule "pkg/kkProto/device-protocol"]
+	path = pkg/kkProto/device-protocol
+	url = https://github.com/keepkey/device-protocol.git
