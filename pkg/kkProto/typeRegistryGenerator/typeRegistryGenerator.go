@@ -14,7 +14,7 @@ var types []string
 func main() {
 
 	// check the AST of each file for protobuf type structs
-	fnames := []string{"messages.pb.go", "types.pb.go", "exchange.pb.go", "storage.pb.go"}
+	fnames := []string{"messages.pb.go", "types.pb.go", "exchange.pb.go", "messages-eos.pb.go", "messages-nano.pb.go"}
 	t := template.Must(template.New("typeTemplate").Parse(typeTemplate))
 	for _, fn := range fnames {
 		parseFile(fn)

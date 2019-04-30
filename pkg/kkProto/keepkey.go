@@ -1,4 +1,4 @@
-//go:generate protoc --go_out=import_path=kkProto:. types.proto exchange.proto messages.proto
+//go:generate protoc -I=./device-protocol --go_out=import_path=kkProto:. device-protocol/types.proto device-protocol/exchange.proto device-protocol/messages.proto device-protocol/messages-eos.proto device-protocol/messages-nano.proto
 //go:generate go run typeRegistryGenerator/typeRegistryGenerator.go
 package kkProto
 
