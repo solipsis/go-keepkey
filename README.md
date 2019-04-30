@@ -136,6 +136,10 @@ entropy, err := kk.GetEntropy(size)
 
 ### Regenerating Protobufs ###
 
+Fetch the latest submoduled version
+
+	git submodule update --init --recursive
+
 This project uses [retool](https://github.com/twitchtv/retool) to vendor tools such as protoc
 
 	go get github.com/twitchtv/retool
