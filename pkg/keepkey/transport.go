@@ -13,7 +13,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/golang/protobuf/proto"
 	"github.com/karalabe/hid"
-	"github.com/solipsis/go-keepkey/pkg/kkProto"
+	"github.com/solipsis/go-keepkey/pkg/kkproto"
 )
 
 // TransportType defines the interface to interact with the device
@@ -191,7 +191,7 @@ func pretty(m proto.Message) string {
 // based on trezorExchange()
 // in https://github.com/go-ethereum/accounts/usbwallet/trezor.go
 func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) (int, error) {
-	kk.log("Sending payload to device:\n%s:\n%s", kkProto.Name(kkProto.Type(req)), pretty(req))
+	kk.log("Sending payload to device:\n%s:\n%s", kkproto.Name(kkproto.Type(req)), pretty(req))
 
 	device := kk.transport.conn
 	debug := false
@@ -208,7 +208,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	}
 	payload := make([]byte, 8+len(data))
 	copy(payload, []byte{0x23, 0x23}) // ## header
-	binary.BigEndian.PutUint16(payload[2:], kkProto.Type(req))
+	binary.BigEndian.PutUint16(payload[2:], kkproto.Type(req))
 	binary.BigEndian.PutUint32(payload[4:], uint32(len(data)))
 	copy(payload[8:], data)
 
@@ -234,7 +234,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	}
 
 	// don't wait for response if sending debug buttonPress
-	if debug && kkProto.Name(kkProto.Type(req)) == "MessageType_DebugLinkDecision" {
+	if debug && kkproto.Name(kkproto.Type(req)) == "MessageType_DebugLinkDecision" {
 		return 0, nil
 	}
 
@@ -249,10 +249,10 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	reply := response.reply
 
 	// Try to parse the reply into the requested reply message
-	if kind == uint16(kkProto.MessageType_MessageType_Failure) {
+	if kind == uint16(kkproto.MessageType_MessageType_Failure) {
 
 		// keepkey returned a failure, extract and return the message
-		failure := new(kkProto.Failure)
+		failure := new(kkproto.Failure)
 		if err := proto.Unmarshal(reply, failure); err != nil {
 			return 0, err
 		}
@@ -261,39 +261,39 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 
 	// Automatically handle Button/Pin/Passphrase requests
 	// handle button requests and forward the results
-	if kind == uint16(kkProto.MessageType_MessageType_ButtonRequest) {
+	if kind == uint16(kkproto.MessageType_MessageType_ButtonRequest) {
 		promptButton()
 		if kk.autoButton && kk.transport.debug != nil {
 			t := true
 			fmt.Println("sending debug press")
-			kk.keepkeyExchange(&kkProto.DebugLinkDecision{YesNo: &t}, &kkProto.Success{})
+			kk.keepkeyExchange(&kkproto.DebugLinkDecision{YesNo: &t}, &kkproto.Success{})
 		}
-		return kk.keepkeyExchange(&kkProto.ButtonAck{}, results...)
+		return kk.keepkeyExchange(&kkproto.ButtonAck{}, results...)
 	}
 	// handle pin matrix requests and forward the results
-	if kind == uint16(kkProto.MessageType_MessageType_PinMatrixRequest) {
+	if kind == uint16(kkproto.MessageType_MessageType_PinMatrixRequest) {
 		pin, err := promptPin()
 		if err != nil {
 			return 0, err
 		}
-		return kk.keepkeyExchange(&kkProto.PinMatrixAck{Pin: &pin}, results...)
+		return kk.keepkeyExchange(&kkproto.PinMatrixAck{Pin: &pin}, results...)
 	}
 	// handle passphrase requests and forward the results
-	if kind == uint16(kkProto.MessageType_MessageType_PassphraseRequest) {
+	if kind == uint16(kkproto.MessageType_MessageType_PassphraseRequest) {
 		fmt.Println("Passphrase requested")
 		pass, err := promptPassphrase()
 		if err != nil {
 			return 0, err
 		}
-		return kk.keepkeyExchange(&kkProto.PassphraseAck{Passphrase: &pass}, results...)
+		return kk.keepkeyExchange(&kkproto.PassphraseAck{Passphrase: &pass}, results...)
 	}
 
 	// If the reply we got can be marshaled into one of our expected results
 	// marshal it and return the index of the expected result it was
 	for i, res := range results {
-		if kkProto.Type(res) == kind {
+		if kkproto.Type(res) == kind {
 			err := proto.Unmarshal(reply, res)
-			kk.log("Recieved message from device:\n%s:\n%s", kkProto.Name(kkProto.Type(res)), pretty(res))
+			kk.log("Recieved message from device:\n%s:\n%s", kkproto.Name(kkproto.Type(res)), pretty(res))
 			return i, err
 		}
 	}
@@ -301,9 +301,9 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 	// We did not recieve what we were expecting.
 	expected := make([]string, len(results))
 	for i, res := range results {
-		expected[i] = kkProto.Name(kkProto.Type(res))
+		expected[i] = kkproto.Name(kkproto.Type(res))
 	}
-	return 0, fmt.Errorf("keepkey: expected reply types %s, got %s", expected, kkProto.Name(kind))
+	return 0, fmt.Errorf("keepkey: expected reply types %s, got %s", expected, kkproto.Name(kind))
 }
 
 // hold partial screen buffers as the screen state is too large to send in a single payload
@@ -316,7 +316,7 @@ var screenData = make(chan []byte, 2)
 func dumpScreen() {
 	for {
 		data := <-screenData
-		dump := new(kkProto.DebugLinkScreenDump)
+		dump := new(kkproto.DebugLinkScreenDump)
 		err := proto.Unmarshal(data, dump)
 		if err != nil {
 			fmt.Println("Can't read screen dump")
@@ -342,7 +342,7 @@ func dumpScreen() {
 // Is the message one we need to send over the debug HID interface
 func isDebugMessage(req interface{}) bool {
 	switch req.(type) {
-	case *kkProto.DebugLinkDecision, *kkProto.DebugLinkFillConfig, *kkProto.DebugLinkGetState:
+	case *kkproto.DebugLinkDecision, *kkproto.DebugLinkFillConfig, *kkproto.DebugLinkGetState:
 		return true
 	}
 	return false

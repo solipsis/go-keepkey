@@ -17,19 +17,19 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/pkg/term"
-	"github.com/solipsis/go-keepkey/pkg/kkProto"
+	"github.com/solipsis/go-keepkey/pkg/kkproto"
 )
 
 // ApplyPolicy enables or disables a named policy such as "ShapeShift" on the device
 func (kk *Keepkey) ApplyPolicy(name string, enabled bool) error {
 
-	pol := &kkProto.PolicyType{
+	pol := &kkproto.PolicyType{
 		PolicyName: &name,
 		Enabled:    &enabled,
 	}
-	arr := make([]*kkProto.PolicyType, 0)
+	arr := make([]*kkproto.PolicyType, 0)
 	arr = append(arr, pol)
-	if _, err := kk.keepkeyExchange(&kkProto.ApplyPolicies{Policy: arr}, new(kkProto.Success)); err != nil {
+	if _, err := kk.keepkeyExchange(&kkproto.ApplyPolicies{Policy: arr}, new(kkproto.Success)); err != nil {
 		return err
 	}
 	return nil
@@ -37,20 +37,20 @@ func (kk *Keepkey) ApplyPolicy(name string, enabled bool) error {
 
 // Initialize sends initialize message to device forcing the device to its neutral state
 // This should be the first message sent when communicating with a device for the first time
-func (kk *Keepkey) Initialize() (*kkProto.Features, error) {
+func (kk *Keepkey) Initialize() (*kkproto.Features, error) {
 
-	features := new(kkProto.Features)
-	if _, err := kk.keepkeyExchange(&kkProto.Initialize{}, features); err != nil {
+	features := new(kkproto.Features)
+	if _, err := kk.keepkeyExchange(&kkproto.Initialize{}, features); err != nil {
 		return nil, err
 	}
 	return features, nil
 }
 
 // GetFeatures returns the features and other device information such as the version, label, and supported coins
-func (kk *Keepkey) GetFeatures() (*kkProto.Features, error) {
+func (kk *Keepkey) GetFeatures() (*kkproto.Features, error) {
 
-	features := new(kkProto.Features)
-	if _, err := kk.keepkeyExchange(&kkProto.GetFeatures{}, features); err != nil {
+	features := new(kkproto.Features)
+	if _, err := kk.keepkeyExchange(&kkproto.GetFeatures{}, features); err != nil {
 		return nil, err
 	}
 	return features, nil
@@ -59,7 +59,7 @@ func (kk *Keepkey) GetFeatures() (*kkProto.Features, error) {
 // ClearSession clears cached session values such as the pin and passphrase
 func (kk *Keepkey) ClearSession() error {
 
-	_, err := kk.keepkeyExchange(&kkProto.ClearSession{}, &kkProto.Success{})
+	_, err := kk.keepkeyExchange(&kkproto.ClearSession{}, &kkproto.Success{})
 	return err
 }
 
@@ -67,7 +67,7 @@ func (kk *Keepkey) ClearSession() error {
 // The default language is english
 func (kk *Keepkey) ApplySettings(label, language string, enablePassphrase bool, autoLockDelayMs uint32) error {
 
-	settings := &kkProto.ApplySettings{
+	settings := &kkproto.ApplySettings{
 		UsePassphrase: &enablePassphrase,
 	}
 
@@ -80,7 +80,7 @@ func (kk *Keepkey) ApplySettings(label, language string, enablePassphrase bool, 
 	if autoLockDelayMs != 0 {
 		settings.AutoLockDelayMs = &autoLockDelayMs
 	}
-	_, err := kk.keepkeyExchange(settings, &kkProto.Success{})
+	_, err := kk.keepkeyExchange(settings, &kkproto.Success{})
 	return err
 }
 
@@ -90,13 +90,13 @@ func (kk *Keepkey) ApplySettings(label, language string, enablePassphrase bool, 
 func (kk *Keepkey) GetAddress(path []uint32, coinName string, display bool) (string, error) {
 
 	//TODO: Add multisig support
-	getAddress := &kkProto.GetAddress{
+	getAddress := &kkproto.GetAddress{
 		AddressN:    path,
 		CoinName:    &coinName,
 		ShowDisplay: &display,
 	}
 
-	addr := new(kkProto.Address)
+	addr := new(kkproto.Address)
 	_, err := kk.keepkeyExchange(getAddress, addr)
 	if err != nil {
 		return "", err
@@ -107,13 +107,13 @@ func (kk *Keepkey) GetAddress(path []uint32, coinName string, display bool) (str
 // SignMessage signs a message using the given nodepath and Coin
 func (kk *Keepkey) SignMessage(path []uint32, msg []byte, coinName string) (string, []byte, error) {
 
-	sign := &kkProto.SignMessage{
+	sign := &kkproto.SignMessage{
 		AddressN: path,
 		Message:  msg,
 		CoinName: &coinName,
 	}
 
-	sig := new(kkProto.MessageSignature)
+	sig := new(kkproto.MessageSignature)
 	if _, err := kk.keepkeyExchange(sign, sig); err != nil {
 		return "", []byte{}, err
 	}
@@ -123,14 +123,14 @@ func (kk *Keepkey) SignMessage(path []uint32, msg []byte, coinName string) (stri
 // VerifyMessage verifies a signed message
 func (kk *Keepkey) VerifyMessage(addr, coinName string, msg, sig []byte) error {
 
-	verify := &kkProto.VerifyMessage{
+	verify := &kkproto.VerifyMessage{
 		Address:   &addr,
 		Signature: sig,
 		Message:   msg,
 		CoinName:  &coinName,
 	}
 
-	_, err := kk.keepkeyExchange(verify, &kkProto.Success{})
+	_, err := kk.keepkeyExchange(verify, &kkproto.Success{})
 	return err
 }
 
@@ -160,13 +160,13 @@ func (kk *Keepkey) recoverDeviceRaw(numWords uint32, dryRun, enforceWordlist boo
 
 	// start the recovery process
 	useCharacterCipher := true
-	recover := &kkProto.RecoveryDevice{
+	recover := &kkproto.RecoveryDevice{
 		WordCount:          &numWords,
 		EnforceWordlist:    &enforceWordlist,
 		DryRun:             &dryRun,
 		UseCharacterCipher: &useCharacterCipher,
 	}
-	req := new(kkProto.CharacterRequest)
+	req := new(kkproto.CharacterRequest)
 	if _, err := kk.keepkeyExchange(recover, req); err != nil {
 		return err
 	}
@@ -209,8 +209,8 @@ func (kk *Keepkey) recoverDeviceRaw(numWords uint32, dryRun, enforceWordlist boo
 
 		// Send the character to the device
 		s := string(r)
-		req = new(kkProto.CharacterRequest)
-		if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Character: &s, Delete: &del}, req); err != nil {
+		req = new(kkproto.CharacterRequest)
+		if _, err := kk.keepkeyExchange(&kkproto.CharacterAck{Character: &s, Delete: &del}, req); err != nil {
 			return err
 		}
 
@@ -229,7 +229,7 @@ func (kk *Keepkey) recoverDeviceRaw(numWords uint32, dryRun, enforceWordlist boo
 
 	// Tell the device we are done
 	done := true
-	if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Done: &done}, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(&kkproto.CharacterAck{Done: &done}, &kkproto.Success{}); err != nil {
 		return err
 	}
 	t.Write([]byte("\n"))
@@ -257,7 +257,7 @@ func (kk *Keepkey) RecoverDevice(numWords uint32, enforceWordList, dryRun, useCh
 func (kk *Keepkey) recoverDevicePromptLegacy(numWords uint32, dryRun, enforceWordlist bool) error {
 
 	useCharacterCipher := false
-	recover := &kkProto.RecoveryDevice{
+	recover := &kkproto.RecoveryDevice{
 		WordCount:          &numWords,
 		EnforceWordlist:    &enforceWordlist,
 		DryRun:             &dryRun,
@@ -265,7 +265,7 @@ func (kk *Keepkey) recoverDevicePromptLegacy(numWords uint32, dryRun, enforceWor
 	}
 
 	// start the recovery process
-	req := new(kkProto.WordRequest)
+	req := new(kkproto.WordRequest)
 	if _, err := kk.keepkeyExchange(recover, req); err != nil {
 		return err
 	}
@@ -279,8 +279,8 @@ func (kk *Keepkey) recoverDevicePromptLegacy(numWords uint32, dryRun, enforceWor
 		}
 
 		// Send the word to the device
-		req = new(kkProto.WordRequest)
-		if _, err := kk.keepkeyExchange(&kkProto.WordAck{Word: &w}, req); err != nil {
+		req = new(kkproto.WordRequest)
+		if _, err := kk.keepkeyExchange(&kkproto.WordAck{Word: &w}, req); err != nil {
 			return err
 		}
 		wordNum++
@@ -293,7 +293,7 @@ func (kk *Keepkey) recoverDevicePromptLegacy(numWords uint32, dryRun, enforceWor
 func (kk *Keepkey) recoverDevicePrompt(numWords uint32, dryRun, enforceWordlist bool) error {
 
 	useCharacterCipher := true
-	recover := &kkProto.RecoveryDevice{
+	recover := &kkproto.RecoveryDevice{
 		WordCount:          &numWords,
 		EnforceWordlist:    &enforceWordlist,
 		DryRun:             &dryRun,
@@ -301,7 +301,7 @@ func (kk *Keepkey) recoverDevicePrompt(numWords uint32, dryRun, enforceWordlist 
 	}
 
 	// start the recovery process
-	req := new(kkProto.CharacterRequest)
+	req := new(kkproto.CharacterRequest)
 	if _, err := kk.keepkeyExchange(recover, req); err != nil {
 		return err
 	}
@@ -317,15 +317,15 @@ func (kk *Keepkey) recoverDevicePrompt(numWords uint32, dryRun, enforceWordlist 
 		// Undo the previous character if the user typed back
 		if s == "undo" {
 			del := true
-			if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Delete: &del}, req); err != nil {
+			if _, err := kk.keepkeyExchange(&kkproto.CharacterAck{Delete: &del}, req); err != nil {
 				return err
 			}
 			continue
 		}
 
 		// Send the character to the device
-		req = new(kkProto.CharacterRequest)
-		if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Character: &s}, req); err != nil {
+		req = new(kkproto.CharacterRequest)
+		if _, err := kk.keepkeyExchange(&kkproto.CharacterAck{Character: &s}, req); err != nil {
 			return err
 		}
 
@@ -334,7 +334,7 @@ func (kk *Keepkey) recoverDevicePrompt(numWords uint32, dryRun, enforceWordlist 
 
 	// Tell the device we are done
 	done := true
-	if _, err := kk.keepkeyExchange(&kkProto.CharacterAck{Done: &done}, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(&kkproto.CharacterAck{Done: &done}, &kkproto.Success{}); err != nil {
 		return err
 	}
 
@@ -346,13 +346,13 @@ func (kk *Keepkey) recoverDevicePrompt(numWords uint32, dryRun, enforceWordlist 
 // in the success message. Optionally require a button press, pin, or passphrase to continue
 func (kk *Keepkey) Ping(msg string, button, pin, password bool) (string, error) {
 
-	ping := &kkProto.Ping{
+	ping := &kkproto.Ping{
 		Message:              &msg,
 		ButtonProtection:     &button,
 		PinProtection:        &pin,
 		PassphraseProtection: &password,
 	}
-	success := new(kkProto.Success)
+	success := new(kkproto.Success)
 	if _, err := kk.keepkeyExchange(ping, success); err != nil {
 		return "", err
 	}
@@ -362,10 +362,10 @@ func (kk *Keepkey) Ping(msg string, button, pin, password bool) (string, error) 
 // ChangePin requests setting/changing the pin
 func (kk *Keepkey) ChangePin() error {
 
-	change := &kkProto.ChangePin{}
+	change := &kkproto.ChangePin{}
 
 	//  User may be prompted for pin up to 2 times
-	if _, err := kk.keepkeyExchange(change, &kkProto.PinMatrixRequest{}, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(change, &kkproto.PinMatrixRequest{}, &kkproto.Success{}); err != nil {
 		return err
 	}
 	return nil
@@ -376,11 +376,11 @@ func (kk *Keepkey) ChangePin() error {
 func (kk *Keepkey) RemovePin() error {
 
 	t := true
-	rem := &kkProto.ChangePin{
+	rem := &kkproto.ChangePin{
 		Remove: &t,
 	}
 
-	if _, err := kk.keepkeyExchange(rem, &kkProto.PinMatrixRequest{}, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(rem, &kkproto.PinMatrixRequest{}, &kkproto.Success{}); err != nil {
 		return err
 	}
 	return nil
@@ -389,7 +389,7 @@ func (kk *Keepkey) RemovePin() error {
 // WipeDevice wipes all sensitive data and settings
 func (kk *Keepkey) WipeDevice() error {
 
-	if _, err := kk.keepkeyExchange(&kkProto.WipeDevice{}, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(&kkproto.WipeDevice{}, &kkproto.Success{}); err != nil {
 		return err
 	}
 	return nil
@@ -399,7 +399,7 @@ func (kk *Keepkey) WipeDevice() error {
 // this message while in manufacturer mode
 func (kk *Keepkey) SoftReset() error {
 
-	if _, err := kk.keepkeyExchange(&kkProto.SoftReset{}, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(&kkproto.SoftReset{}, &kkproto.Success{}); err != nil {
 		return err
 	}
 	return nil
@@ -408,7 +408,7 @@ func (kk *Keepkey) SoftReset() error {
 // FirmwareErase askes the device to erase its firmware
 func (kk *Keepkey) FirmwareErase() error {
 
-	if _, err := kk.keepkeyExchange(&kkProto.FirmwareErase{}, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(&kkproto.FirmwareErase{}, &kkproto.Success{}); err != nil {
 		return err
 	}
 	return nil
@@ -418,15 +418,15 @@ func (kk *Keepkey) FirmwareErase() error {
 func (kk *Keepkey) GetEntropy(size uint32) ([]byte, error) {
 
 	buf := make([]byte, 0)
-	entropy := new(kkProto.Entropy)
-	if _, err := kk.keepkeyExchange(&kkProto.GetEntropy{Size: &size}, entropy); err != nil {
+	entropy := new(kkproto.Entropy)
+	if _, err := kk.keepkeyExchange(&kkproto.GetEntropy{Size: &size}, entropy); err != nil {
 		return []byte{}, err
 	}
 	return append(buf, entropy.Entropy...), nil
 }
 
 type HDNode struct {
-	*kkProto.HDNodeType
+	*kkproto.HDNodeType
 }
 
 // GetPublicKey asks the device for a public key corresponding to a nodePath and curve name.
@@ -434,12 +434,12 @@ type HDNode struct {
 // This may prompt the user for a passphrase
 func (kk *Keepkey) GetPublicKey(path []uint32, curveName string, showDisplay bool) (*HDNode, string, error) {
 
-	getPubKey := &kkProto.GetPublicKey{
+	getPubKey := &kkproto.GetPublicKey{
 		AddressN:       path,
 		EcdsaCurveName: &curveName,
 		ShowDisplay:    &showDisplay,
 	}
-	pubKey := new(kkProto.PublicKey)
+	pubKey := new(kkproto.PublicKey)
 	if _, err := kk.keepkeyExchange(getPubKey, pubKey); err != nil {
 		return nil, "", err
 	}
@@ -453,7 +453,7 @@ func (kk *Keepkey) LoadDevice(mnemonic []string, pin, label string, passphrase, 
 
 	// The device expects the mnemonic as a string of space seperated words
 	mnemonicStr := strings.Join(mnemonic, " ")
-	load := &kkProto.LoadDevice{
+	load := &kkproto.LoadDevice{
 		Mnemonic:             &mnemonicStr,
 		PassphraseProtection: &passphrase,
 		SkipChecksum:         &skipChecksum,
@@ -466,7 +466,7 @@ func (kk *Keepkey) LoadDevice(mnemonic []string, pin, label string, passphrase, 
 	}
 
 	// Load device using provided settings
-	if _, err := kk.keepkeyExchange(load, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(load, &kkproto.Success{}); err != nil {
 		return err
 	}
 	return nil
@@ -488,7 +488,7 @@ func (kk *Keepkey) ResetDevice(strength entropyStrength, addtlEntropy []byte, sh
 
 	language := "english"
 	deviceEntropyStrength := uint32(strength)
-	reset := &kkProto.ResetDevice{
+	reset := &kkproto.ResetDevice{
 		Strength:             &deviceEntropyStrength,
 		DisplayRandom:        &showRandom,
 		PassphraseProtection: &passphrase,
@@ -496,17 +496,17 @@ func (kk *Keepkey) ResetDevice(strength entropyStrength, addtlEntropy []byte, sh
 		Label:                &label,
 		Language:             &language,
 	}
-	if _, err := kk.keepkeyExchange(reset, &kkProto.EntropyRequest{}); err != nil {
+	if _, err := kk.keepkeyExchange(reset, &kkproto.EntropyRequest{}); err != nil {
 		return err
 	}
 
-	ack := &kkProto.EntropyAck{
+	ack := &kkproto.EntropyAck{
 		Entropy: addtlEntropy,
 		//WordsPerGape: &wordsPerScreen, TODO: re-enable when patch makes it upstream
 	}
 
 	// The device will respond asking for additional entropy from the computer
-	if _, err := kk.keepkeyExchange(ack, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(ack, &kkproto.Success{}); err != nil {
 		return err
 	}
 	return nil
@@ -516,7 +516,7 @@ func (kk *Keepkey) ResetDevice(strength entropyStrength, addtlEntropy []byte, sh
 // It can follow a button request, passphrase request, or pin request
 func (kk *Keepkey) Cancel() error {
 
-	_, err := kk.keepkeyExchange(&kkProto.Cancel{})
+	_, err := kk.keepkeyExchange(&kkproto.Cancel{})
 	return err
 }
 
@@ -532,7 +532,7 @@ func (kk *Keepkey) CipherKeyValue(path []uint32, key string, val, IV []byte, enc
 		//return []byte{}, errors.New("Length of value to encrypt/decrypt must be multiple of 16 bytes")
 	}
 
-	cipher := &kkProto.CipherKeyValue{
+	cipher := &kkproto.CipherKeyValue{
 		AddressN:     path,
 		Key:          &key,
 		Value:        val,
@@ -542,7 +542,7 @@ func (kk *Keepkey) CipherKeyValue(path []uint32, key string, val, IV []byte, enc
 		Iv:           IV,
 	}
 	data := make([]byte, 0)
-	res := new(kkProto.CipheredKeyValue)
+	res := new(kkproto.CipheredKeyValue)
 	if _, err := kk.keepkeyExchange(cipher, res); err != nil {
 		return data, err
 	}
@@ -583,16 +583,16 @@ func (kk *Keepkey) UploadFirmware(path string) (int, error) {
 	hash := hasher.Sum(nil)
 
 	// erase before upload
-	if _, err := kk.keepkeyExchange(&kkProto.FirmwareErase{}, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(&kkproto.FirmwareErase{}, &kkproto.Success{}); err != nil {
 		return 0, err
 	}
 
 	// upload new firmware
-	up := &kkProto.FirmwareUpload{
+	up := &kkproto.FirmwareUpload{
 		Payload:     data,
 		PayloadHash: hash[:],
 	}
-	if _, err := kk.keepkeyExchange(up, &kkProto.Success{}); err != nil {
+	if _, err := kk.keepkeyExchange(up, &kkproto.Success{}); err != nil {
 		return 0, err
 	}
 	return len(data), nil
@@ -658,12 +658,12 @@ func signFirmware(path string) error {
 // data should be at most 1024 bytes at a time
 func (kk *Keepkey) FlashWrite(address uint32, data []byte) ([]byte, error) {
 
-	write := &kkProto.FlashWrite{
+	write := &kkproto.FlashWrite{
 		Address: &address,
 		Data:    data,
 	}
 
-	resp := new(kkProto.FlashHashResponse)
+	resp := new(kkproto.FlashHashResponse)
 	if _, err := kk.keepkeyExchange(write, resp); err != nil {
 		return []byte{}, err
 	}
@@ -675,12 +675,12 @@ func (kk *Keepkey) FlashWrite(address uint32, data []byte) ([]byte, error) {
 // length should be at most 1024
 func (kk *Keepkey) FlashDump(address, length uint32) ([]byte, error) {
 
-	dump := &kkProto.DebugLinkFlashDump{
+	dump := &kkproto.DebugLinkFlashDump{
 		Address: &address,
 		Length:  &length,
 	}
 
-	resp := new(kkProto.DebugLinkFlashDumpResponse)
+	resp := new(kkproto.DebugLinkFlashDumpResponse)
 	if _, err := kk.keepkeyExchange(dump, resp); err != nil {
 		return []byte{}, err
 	}
@@ -691,13 +691,13 @@ func (kk *Keepkey) FlashDump(address, length uint32) ([]byte, error) {
 func (kk *Keepkey) FlashHash(address, challenge []byte, length uint32) ([]byte, error) {
 
 	addr := binary.BigEndian.Uint32(address)
-	flash := &kkProto.FlashHash{
+	flash := &kkproto.FlashHash{
 		Address:   &addr,
 		Length:    &length,
 		Challenge: challenge,
 	}
 
-	hash := new(kkProto.FlashHashResponse)
+	hash := new(kkproto.FlashHashResponse)
 	if _, err := kk.keepkeyExchange(flash, hash); err != nil {
 		return []byte{}, err
 	}
@@ -707,10 +707,10 @@ func (kk *Keepkey) FlashHash(address, challenge []byte, length uint32) ([]byte, 
 // DebugLinkGetState returns a variety of device debugging information including SECRETS
 // and should never be used in conjunction with a seed that contains funds.
 // This method can only be called on a device with debug enabled firmware
-func (kk *Keepkey) DebugLinkGetState() (*kkProto.DebugLinkState, error) {
+func (kk *Keepkey) DebugLinkGetState() (*kkproto.DebugLinkState, error) {
 
-	debug := new(kkProto.DebugLinkGetState)
-	state := new(kkProto.DebugLinkState)
+	debug := new(kkproto.DebugLinkGetState)
+	state := new(kkproto.DebugLinkState)
 	if _, err := kk.keepkeyExchange(debug, state); err != nil {
 		return nil, err
 	}
@@ -721,12 +721,12 @@ func (kk *Keepkey) DebugLinkGetState() (*kkProto.DebugLinkState, error) {
 // Optionally you can display  the address on the screen
 func (kk *Keepkey) EthereumGetAddress(path []uint32, display bool) ([]byte, error) {
 
-	getAddr := &kkProto.EthereumGetAddress{
+	getAddr := &kkproto.EthereumGetAddress{
 		AddressN:    path,
 		ShowDisplay: &display,
 	}
 
-	addr := new(kkProto.EthereumAddress)
+	addr := new(kkproto.EthereumAddress)
 	if _, err := kk.keepkeyExchange(getAddr, addr); err != nil {
 		return []byte{}, err
 	}
@@ -751,7 +751,7 @@ func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, tx *EthereumTx) (*Eth
 	}
 
 	// Create request
-	est := &kkProto.EthereumSignTx{
+	est := &kkproto.EthereumSignTx{
 		AddressN: derivationPath,
 		Nonce:    big.NewInt(int64(tx.Nonce)).Bytes(),
 		To:       toBuf,
@@ -782,9 +782,9 @@ func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, tx *EthereumTx) (*Eth
 	return tx, nil
 }
 
-func (kk *Keepkey) ethereumSignTx(est *kkProto.EthereumSignTx) (*kkProto.EthereumTxRequest, error) {
+func (kk *Keepkey) ethereumSignTx(est *kkproto.EthereumSignTx) (*kkproto.EthereumTxRequest, error) {
 	data := make([]byte, 0)
-	response := new(kkProto.EthereumTxRequest)
+	response := new(kkproto.EthereumTxRequest)
 
 	if _, err := kk.keepkeyExchange(est, response); err != nil {
 		return nil, err
@@ -795,7 +795,7 @@ func (kk *Keepkey) ethereumSignTx(est *kkProto.EthereumSignTx) (*kkProto.Ethereu
 		chunk := data[:*response.DataLength]
 		data = data[*response.DataLength:]
 		// acknowledge that we got a chunk and ask for the next one
-		if _, err := kk.keepkeyExchange(&kkProto.EthereumTxAck{DataChunk: chunk}, response); err != nil {
+		if _, err := kk.keepkeyExchange(&kkproto.EthereumTxAck{DataChunk: chunk}, response); err != nil {
 			fmt.Println("error streaming response")
 			return nil, err
 		}
@@ -883,11 +883,11 @@ type TxRequestSerializedType struct {
 
 func (kk *Keepkey) SignTx(outCount, inCount, version, locktime uint32, name string) {
 	// send SignTx
-	//kkProto.SignTx
+	//kkproto.SignTx
 
 	// device responds with TxRequest
-	//kkProto.TxRequest
-	//kkProto.TxAck
+	//kkproto.TxRequest
+	//kkproto.TxAck
 	// if details.request_idex. Send an ack with fields base on request type
 	// if serilazed.signatur_index signature contains signed input of signatur_index's input
 }

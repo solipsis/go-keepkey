@@ -5,7 +5,7 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/solipsis/go-keepkey/pkg/kkProto"
+	"github.com/solipsis/go-keepkey/pkg/kkproto"
 )
 
 type ethSignTxJSON struct {
@@ -56,8 +56,8 @@ type exchangeType struct {
 	ReturnAddressN     []uint32 `json:"return_address_n"`
 }
 
-func exchangeAddressFromJSON(a exchangeAddress) *kkProto.ExchangeAddress {
-	return &kkProto.ExchangeAddress{
+func exchangeAddressFromJSON(a exchangeAddress) *kkproto.ExchangeAddress {
+	return &kkproto.ExchangeAddress{
 		CoinType: &a.CoinType,
 		Address:  &a.Address,
 	}
@@ -71,9 +71,9 @@ func mustDecode(s string) []byte {
 	return h
 }
 
-func ethSignProtoFromJSON(e ethSignTxJSON) *kkProto.EthereumSignTx {
-	addrType := kkProto.OutputAddressType(kkProto.OutputAddressType_value[e.AddressType])
-	ret := &kkProto.EthereumSignTx{
+func ethSignProtoFromJSON(e ethSignTxJSON) *kkproto.EthereumSignTx {
+	addrType := kkproto.OutputAddressType(kkproto.OutputAddressType_value[e.AddressType])
+	ret := &kkproto.EthereumSignTx{
 		AddressN: e.AddressN,
 		Nonce:    mustDecode(e.Nonce),
 		GasPrice: mustDecode(e.GasPrice),
@@ -102,11 +102,11 @@ func ethSignProtoFromJSON(e ethSignTxJSON) *kkProto.EthereumSignTx {
 	return ret
 }
 
-func exchangeProtoFromJSON(e exchangeType) *kkProto.ExchangeType {
+func exchangeProtoFromJSON(e exchangeType) *kkproto.ExchangeType {
 	resp := e.SignedExchangeResponse
 	v2 := resp.ResponseV2
 	exp, _ := strconv.ParseInt(v2.Expiration, 10, 64)
-	retV2 := kkProto.ExchangeResponseV2{
+	retV2 := kkproto.ExchangeResponseV2{
 		DepositAddress:    exchangeAddressFromJSON(v2.DepositAddress),
 		DepositAmount:     mustDecode(v2.DepositAmount),
 		Expiration:        &exp,
@@ -118,11 +118,11 @@ func exchangeProtoFromJSON(e exchangeType) *kkProto.ExchangeType {
 		MinerFee:          mustDecode(v2.MinerFee),
 		OrderId:           mustDecode(v2.OrderID),
 	}
-	signedExchangeResponse := kkProto.SignedExchangeResponse{
+	signedExchangeResponse := kkproto.SignedExchangeResponse{
 		ResponseV2: &retV2,
 		Signature:  mustDecode(resp.Signature),
 	}
-	return &kkProto.ExchangeType{
+	return &kkproto.ExchangeType{
 		SignedExchangeResponse: &signedExchangeResponse,
 		WithdrawalCoinName:     &e.WithdrawalCoinName,
 		WithdrawalAddressN:     e.WithdrawalAddressN,

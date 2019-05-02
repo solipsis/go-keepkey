@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/solipsis/go-keepkey/pkg/kkProto"
+	"github.com/solipsis/go-keepkey/pkg/kkproto"
 )
 
 type EthereumTx struct {
@@ -34,9 +34,9 @@ type TokenTx struct {
 }
 
 // convert EthTx to protobuf to send to device
-func ethTxAsProto(tx *EthereumTx, nodePath []uint32) *kkProto.EthereumSignTx {
+func ethTxAsProto(tx *EthereumTx, nodePath []uint32) *kkproto.EthereumSignTx {
 
-	est := &kkProto.EthereumSignTx{
+	est := &kkproto.EthereumSignTx{
 		AddressN: nodePath,
 	}
 

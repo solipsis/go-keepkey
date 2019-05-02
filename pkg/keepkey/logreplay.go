@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/solipsis/go-keepkey/pkg/kkProto"
+	"github.com/solipsis/go-keepkey/pkg/kkproto"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
@@ -79,23 +79,23 @@ func (r *Replay) Play(kk *Keepkey) {
 // reflectJSON attempts to unmarshal a given json string into
 // a reflected proto.Message using the typeName and typeRegistry
 func reflectJSON(typeName string, body []byte) (proto.Message, error) {
-	t, ok := kkProto.TypeRegistry(typeName)
+	t, ok := kkproto.TypeRegistry(typeName)
 	if !ok {
-		return &kkProto.Ping{}, fmt.Errorf("No type with name %s found in TypeRegistry", typeName)
+		return &kkproto.Ping{}, fmt.Errorf("No type with name %s found in TypeRegistry", typeName)
 	}
 
 	p := reflect.New(t).Interface()
 
 	pr, ok := p.(proto.Message)
 	if !ok {
-		return &kkProto.Ping{}, fmt.Errorf("Reflected type does not implement proto.Message")
+		return &kkproto.Ping{}, fmt.Errorf("Reflected type does not implement proto.Message")
 	}
 
 	un := &jsonpb.Unmarshaler{AllowUnknownFields: true}
 	buf := bytes.NewBuffer(body)
 	err := un.Unmarshal(buf, pr)
 	if err != nil {
-		return &kkProto.Ping{}, fmt.Errorf("Unable to unmarshal parsed json:\n%s into type %s, With error: %s", body, typeName, err.Error())
+		return &kkproto.Ping{}, fmt.Errorf("Unable to unmarshal parsed json:\n%s into type %s, With error: %s", body, typeName, err.Error())
 	}
 
 	return pr, nil
