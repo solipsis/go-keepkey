@@ -46,10 +46,10 @@ func GetDevicesWithConfig(cfg *Config) ([]*Keepkey, error) {
 	webUSBDevices, err := enumerateWebUSB()
 	if err != nil {
 		// TODO: Can't find good way to tell if device is webusb or hid because it is advertised on both?
-		// Swallow output if pid=0001 because this device is probably in HID->webUSB limbo and will
+		// Swallow output if pid=0001 || pid=0002 because this device is probably in HID->webUSB limbo and will
 		// soon be updated
-		if !strings.Contains(err.Error(), "pid=0001") {
-			fmt.Println(color.RedString("Unable to connect to webusb device. Make sure no other processes are currently connected to the device"), err)
+		if !strings.Contains(err.Error(), "pid=0001") || !strings.Contains(err.Error(), "pid=0002") {
+			fmt.Println(color.RedString("Unable to connect to webusb device. Make sure no other processes are currently connected to the device:"), err)
 		}
 	}
 

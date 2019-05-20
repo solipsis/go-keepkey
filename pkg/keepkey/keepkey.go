@@ -14,8 +14,9 @@ var (
 	// vendorID  uint16 = 0x534c
 )
 
-// Keepkey represents an open HID connection to a keepkey and possibly a
-// connection to the debug link if enabled
+// Keepkey represents an open connection to a keepkey and possibly a
+// connection to the debug link if enabled. This is the primary handle for interacting
+// with a Keepkey device.
 type Keepkey struct {
 	transport         *transport
 	autoButton        bool // Automatically send button presses. DebugLink must be enabled in the firmware
