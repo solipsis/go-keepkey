@@ -46,7 +46,7 @@ var targetDevice string
 var rootCmd = &cobra.Command{
 	Use:   "go-keepkey",
 	Short: "go-keepkey is a CLI for interacting with keepkey devices",
-	Long:  "lgo-keepkey is a CLI for interacting with keepkey devices",
+	Long:  "go-keepkey is a CLI for interacting with keepkey devices",
 }
 
 func init() {
