@@ -67,11 +67,12 @@ var upgradeFirmwareCmd = &cobra.Command{
 			}
 
 			// upload the downloaded asset to the keepkey
-			_, err = kk.UploadFirmware(body)
+			i, err := kk.UploadFirmware(body)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
+			fmt.Printf("Upload complete %d bytes written\n", i)
 		}
 
 		if !found {
