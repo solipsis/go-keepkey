@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -19,7 +20,14 @@ var uploadFirmwareCmd = &cobra.Command{
 	Short: "Upload a new firmware binary to the device",
 	Long:  "Uploads a new firmware binary to the device, The firmware must be signed",
 	Run: func(cmd *cobra.Command, args []string) {
-		i, err := kk.UploadFirmware(filepath)
+
+		bin, err := ioutil.ReadFile(filepath)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		i, err := kk.UploadFirmware(bin)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
