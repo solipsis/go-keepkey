@@ -84,7 +84,7 @@ func TestChangeLabel(t *testing.T) {
 	l1 := "TestLabel"
 	l2 := "pot@t0"
 
-	if err := kk.ApplySettings(l1, "", false); err != nil {
+	if err := kk.ApplySettings(l1, "", false, 1000); err != nil {
 		t.Error("Failed to update label:", err)
 	}
 	if feat, err := kk.GetFeatures(); err != nil || feat.GetLabel() != l1 {
@@ -92,7 +92,7 @@ func TestChangeLabel(t *testing.T) {
 	}
 
 	// Change label again
-	if err := kk.ApplySettings(l2, "", false); err != nil {
+	if err := kk.ApplySettings(l2, "", false, 1000); err != nil {
 		t.Error("Failed to update label:", err)
 	}
 	if feat, err := kk.GetFeatures(); err != nil || feat.GetLabel() != l2 {
@@ -102,7 +102,7 @@ func TestChangeLabel(t *testing.T) {
 
 func TestEnablePassphrase(t *testing.T) {
 
-	if err := kk.ApplySettings("", "", true); err != nil {
+	if err := kk.ApplySettings("", "", true, 1000); err != nil {
 		t.Error("Failed to enable passphrase:", err)
 	}
 	if feat, err := kk.GetFeatures(); err != nil || !feat.GetPassphraseProtection() {
@@ -110,7 +110,7 @@ func TestEnablePassphrase(t *testing.T) {
 	}
 
 	// Disable the passphrase
-	if err := kk.ApplySettings("", "", false); err != nil {
+	if err := kk.ApplySettings("", "", false, 1000); err != nil {
 		t.Error("Failed to disable passphrase:", err)
 	}
 	if feat, err := kk.GetFeatures(); err != nil || feat.GetPassphraseProtection() {
