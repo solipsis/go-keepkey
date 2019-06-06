@@ -26,6 +26,7 @@ Available Commands:
     applySettings   Update the label, language, and enable/disable the passphrase
     changePin       Change or add a pin to the device
     clearSession    Clear session data such as the pin session and passphrase
+    debugGetState   Get device debug info. This REVEALS SECRETS and can only be used with debug enabled firmware
     decryptKeyValue Decrypt a value with a given key and nodepath
     encryptKeyValue Encrypt a value with a given key and nodepath
     flashDump       dump certain section of flash
@@ -41,18 +42,22 @@ Available Commands:
     ping            Ping the device with a message
     recoverDevice   Begin interactive device recovery
     removePin       Disable pin on the device
+    replay          Replay messages in kk log format to the device
     resetDevice     Reset the device and generate a new seed using device RNG
     signEthTx       Sign an ethereum transaction
     signMessage     Sign a message using a given node path and coin
     softReset       Soft reset / power cycle the device. Only works on devices in manufacturer mode
+    upgradeFirmware Upgrade firmware to a specified tagged version or latest if none is specified
     uploadFirmware  Upload a new firmware binary to the device
     verifyMessage   Verify a signed message
     wipeDevice      Erase all sensitive information on the device
 
 Flags:
-      --autoButton   Automatic button pressing if debug link is enabled (default true)
-      --debug        Debug level logging
-  -h, --help         help for go-keepkey
+      --autoButton      Automatic button pressing if debug link is enabled (default true)
+      --debug           Debug level logging
+  -h, --help            help for go-keepkey
+      --target string   Device label or HID serial to connect to if more than one device is connected
+
 ``` 
 
 ## Usage ##
