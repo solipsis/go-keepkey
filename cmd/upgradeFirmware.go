@@ -66,8 +66,8 @@ var upgradeFirmwareCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			ioutil.WriteFile(*asset.Name, body, 0644)
-			_, err = kk.UploadFirmware(*asset.Name)
+			// upload the downloaded asset to the keepkey
+			_, err = kk.UploadFirmware(body)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
