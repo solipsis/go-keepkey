@@ -32,7 +32,7 @@ var getPublicKeyCmd = &cobra.Command{
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		fmt.Println("XPUB: ", xpub)
+		fmt.Println("xpub: ", xpub)
 		//TODO: prettier node printing
 		fmt.Println("Node: ", node)
 	},
