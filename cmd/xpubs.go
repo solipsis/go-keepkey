@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-
+	xpubsCmd.Flags().Uint32VarP(&numAccounts, "numAccounts", "n", 2, "How many accounts per bip44 prefix to explore")
 	rootCmd.AddCommand(xpubsCmd)
 }
 
@@ -32,6 +32,8 @@ var coins = []coin{
 	coin{"EOS", "44'/194'"},
 }
 
+var numAccounts uint32
+
 var xpubsCmd = &cobra.Command{
 	Use:   "xpubs",
 	Short: "get a table of xpubs from the device",
@@ -47,16 +49,18 @@ var xpubsCmd = &cobra.Command{
 		fmt.Fprintln(w, "__________________\t____________\t________________________")
 		// for each
 		for _, c := range coins {
+			for x := 0; x < int(numAccounts); x++ {
 
-			path, err := keepkey.ParsePath(c.slip44)
-			// TODO: validate that all coins use this curve for xpub purposes
-			_, xpub, err := kk.GetPublicKey(path, "secp256k1", false)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				path, err := keepkey.ParsePath(c.slip44)
+				// TODO: validate that all coins use this curve for xpub purposes
+				_, xpub, err := kk.GetPublicKey(path, "secp256k1", false)
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+
+				fmt.Fprintf(w, "%s\t%s/%d'\t%s\n", c.name, c.slip44, x, xpub)
 			}
-
-			fmt.Fprintf(w, "%s\t%s/0'\t%s\n", c.name, c.slip44, xpub)
 		}
 		w.Flush()
 	},
