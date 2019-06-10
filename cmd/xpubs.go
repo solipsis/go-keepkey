@@ -40,18 +40,17 @@ var xpubsCmd = &cobra.Command{
 	Long:  "gets a table of xpubs from the device",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		// find out all key slip 44 paths
-
 		w := new(tabwriter.Writer)
-		w.Init(os.Stdout, 0, 8, 0, '\t', 0)
-		magenta := color.New(color.FgMagenta).FprintFunc()
+		w.Init(os.Stdout, 0, 8, 2, '\t', 0)
+
+		magenta := color.New(color.FgBlue).FprintfFunc()
 		magenta(w, "|  coin  |\t|  path  |\t|  xpub  |\n")
-		fmt.Fprintln(w, "__________________\t____________\t________________________")
-		// for each
+		fmt.Fprintf(w, "__________\t__________\t__________\n")
+
 		for _, c := range coins {
 			for x := 0; x < int(numAccounts); x++ {
 
-				path, err := keepkey.ParsePath(c.slip44)
+				path, err := keepkey.ParsePath(fmt.Sprintf("%s/%d'", c.slip44, x))
 				// TODO: validate that all coins use this curve for xpub purposes
 				_, xpub, err := kk.GetPublicKey(path, "secp256k1", false)
 				if err != nil {
