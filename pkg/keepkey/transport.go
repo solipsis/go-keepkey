@@ -214,7 +214,7 @@ func (kk *Keepkey) keepkeyExchange(req proto.Message, results ...proto.Message) 
 
 	// stream all the chunks to the device
 	chunk := make([]byte, 64)
-	chunk[0] = 0x3f // HID Magic number???
+	chunk[0] = 0x3f // HID report id
 
 	for len(payload) > 0 {
 		// create the message to stream and pad with zeroes if necessary
