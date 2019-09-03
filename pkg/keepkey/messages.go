@@ -799,6 +799,79 @@ func (kk *Keepkey) ethereumSignTx(est *kkproto.EthereumSignTx) (*kkproto.Ethereu
 
 }
 
+type input struct {
+}
+
+type output struct {
+}
+
+func (kk *Keepkey) signTx(est *kkproto.SignTx, cname string, inputs []input, outputs []output) (*kkproto.TxRequest, error) {
+
+	var (
+		inCount  = uint32(len(inputs))
+		outCount = uint32(len(outputs))
+		coinName = cname
+	)
+
+	signTx := &kkproto.SignTx{
+		OutputsCount: &outCount,
+		InputsCount:  &inCount,
+		CoinName:     &coinName,
+	}
+
+	// serialized transaction
+	serialized := make([]byte, 0)
+	signatures := make([][]byte, len(inputs))
+
+	req := new(kkproto.TxRequest)
+	if _, err := kk.keepkeyExchange(signTx, req); err != nil {
+		return req, err
+	}
+
+	for {
+		if req.Serialized != nil {
+
+			// copy a new chunk serialized transaction if present
+			serialized = append(serialized, req.Serialized.SerializedTx...)
+
+			if req.Serialized.SignatureIndex != nil {
+				copy(signatures[*req.Serialized.SignatureIndex], req.Serialized.Signature)
+			}
+		}
+
+		// device says we are done signing
+		if *req.RequestType == kkproto.RequestType_TXFINISHED {
+			break
+		}
+
+	}
+
+	return nil, nil
+}
+
+// *
+// Request: Ask device to sign transaction
+// @next PassphraseRequest
+// @next PinMatrixRequest
+// @next TxRequest
+// @next Failure
+/*
+type SignTx struct {
+	OutputsCount         *uint32  `protobuf:"varint,1,req,name=outputs_count,json=outputsCount" json:"outputs_count,omitempty"`
+	InputsCount          *uint32  `protobuf:"varint,2,req,name=inputs_count,json=inputsCount" json:"inputs_count,omitempty"`
+	CoinName             *string  `protobuf:"bytes,3,opt,name=coin_name,json=coinName,def=Bitcoin" json:"coin_name,omitempty"`
+	Version              *uint32  `protobuf:"varint,4,opt,name=version,def=1" json:"version,omitempty"`
+	LockTime             *uint32  `protobuf:"varint,5,opt,name=lock_time,json=lockTime,def=0" json:"lock_time,omitempty"`
+	Expiry               *uint32  `protobuf:"varint,6,opt,name=expiry" json:"expiry,omitempty"`
+	Overwintered         *bool    `protobuf:"varint,7,opt,name=overwintered" json:"overwintered,omitempty"`
+	VersionGroupId       *uint32  `protobuf:"varint,8,opt,name=version_group_id,json=versionGroupId" json:"version_group_id,omitempty"`
+	BranchId             *uint32  `protobuf:"varint,10,opt,name=branch_id,json=branchId" json:"branch_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+*/
+
 /*
 // Response: Device asks for information for signing transaction or returns the last result
 // If request_index is set, device awaits TxAck message (with fields filled in according to request_type)
