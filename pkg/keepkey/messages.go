@@ -805,6 +805,48 @@ type input struct {
 type output struct {
 }
 
+type transaction struct {
+}
+
+func copyTxMeta(tx *kkproto.TransactionType) *kkproto.TransactionType {
+
+	var (
+		inCount, outCount uint32
+		version           uint32
+		locktime          uint32
+		extraDataLen      uint32
+	)
+
+	if tx.Version != nil {
+		version = *tx.Version
+	}
+	if tx.LockTime != nil {
+		locktime = *tx.LockTime
+	}
+
+	if len(tx.ExtraData) > 0 {
+		extraDataLen = uint32(len(tx.ExtraData))
+	}
+
+	inCount = uint32(len(tx.Inputs))
+	if len(tx.BinOutputs) > 0 {
+		outCount = uint32(len(tx.BinOutputs))
+	} else {
+		outCount = uint32(len(tx.Outputs))
+	}
+
+	return &kkproto.TransactionType{
+		LockTime:     &locktime,
+		Version:      &version,
+		InputsCnt:    &inCount,
+		OutputsCnt:   &outCount,
+		ExtraDataLen: &extraDataLen,
+		BinOutputs:   make([]*kkproto.TxOutputBinType, 0),
+		Outputs:      make([]*kkproto.TxOutputType, 0),
+		Inputs:       make([]*kkproto.TxInputType, 0),
+	}
+}
+
 func (kk *Keepkey) signTx(est *kkproto.SignTx, cname string, inputs []input, outputs []output) (*kkproto.TxRequest, error) {
 
 	var (
@@ -823,12 +865,15 @@ func (kk *Keepkey) signTx(est *kkproto.SignTx, cname string, inputs []input, out
 	serialized := make([]byte, 0)
 	signatures := make([][]byte, len(inputs))
 
+	var err error
 	req := new(kkproto.TxRequest)
-	if _, err := kk.keepkeyExchange(signTx, req); err != nil {
-		return req, err
-	}
+	_, err = kk.keepkeyExchange(signTx, req)
 
 	for {
+		if err != nil {
+			return req, err
+		}
+
 		if req.Serialized != nil {
 
 			// copy a new chunk serialized transaction if present
@@ -844,10 +889,50 @@ func (kk *Keepkey) signTx(est *kkproto.SignTx, cname string, inputs []input, out
 			break
 		}
 
+		var currentTx *kkproto.TransactionType
+		// If the field details.tx_hash is not set, some piece of the transaction that should be signed is requested.
+		// Otherwise, this field contains the hash of some input transaction and some piece of that transaction is requested.
+		if req.Details != nil && len(req.Details.TxHash) > 0 {
+			//currentTx = string(req.Details.TxHash)
+			fmt.Println(currentTx)
+		}
+
+		if *req.RequestType == kkproto.RequestType_TXMETA {
+			ack := &kkproto.TxAck{
+				Tx: copyTxMeta(currentTx),
+			}
+			_, err = kk.keepkeyExchange(ack, req)
+			continue
+		}
+
 	}
 
 	return nil, nil
 }
+
+/*
+// *
+// Structure representing transaction
+type TransactionType struct {
+	Version              *uint32            `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
+	Inputs               []*TxInputType     `protobuf:"bytes,2,rep,name=inputs" json:"inputs,omitempty"`
+	BinOutputs           []*TxOutputBinType `protobuf:"bytes,3,rep,name=bin_outputs,json=binOutputs" json:"bin_outputs,omitempty"`
+	Outputs              []*TxOutputType    `protobuf:"bytes,5,rep,name=outputs" json:"outputs,omitempty"`
+	LockTime             *uint32            `protobuf:"varint,4,opt,name=lock_time,json=lockTime" json:"lock_time,omitempty"`
+	InputsCnt            *uint32            `protobuf:"varint,6,opt,name=inputs_cnt,json=inputsCnt" json:"inputs_cnt,omitempty"`
+	OutputsCnt           *uint32            `protobuf:"varint,7,opt,name=outputs_cnt,json=outputsCnt" json:"outputs_cnt,omitempty"`
+	ExtraData            []byte             `protobuf:"bytes,8,opt,name=extra_data,json=extraData" json:"extra_data,omitempty"`
+	ExtraDataLen         *uint32            `protobuf:"varint,9,opt,name=extra_data_len,json=extraDataLen" json:"extra_data_len,omitempty"`
+	Expiry               *uint32            `protobuf:"varint,10,opt,name=expiry" json:"expiry,omitempty"`
+	Overwintered         *bool              `protobuf:"varint,11,opt,name=overwintered" json:"overwintered,omitempty"`
+	VersionGroupId       *uint32            `protobuf:"varint,12,opt,name=version_group_id,json=versionGroupId" json:"version_group_id,omitempty"`
+	BranchId             *uint32            `protobuf:"varint,13,opt,name=branch_id,json=branchId" json:"branch_id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
+}
+
+*/
 
 // *
 // Request: Ask device to sign transaction
