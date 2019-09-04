@@ -870,6 +870,8 @@ func (kk *Keepkey) signTx(est *kkproto.SignTx, cname string, inputs []input, out
 	_, err = kk.keepkeyExchange(signTx, req)
 
 	for {
+		fmt.Println("*********************************************************")
+		fmt.Printf("%+v\n", req)
 		if err != nil {
 			return req, err
 		}
@@ -901,12 +903,41 @@ func (kk *Keepkey) signTx(est *kkproto.SignTx, cname string, inputs []input, out
 			ack := &kkproto.TxAck{
 				Tx: copyTxMeta(currentTx),
 			}
+			req = new(kkproto.TxRequest)
+			_, err = kk.keepkeyExchange(ack, req)
+			continue
+		}
+		if *req.RequestType == kkproto.RequestType_TXINPUT {
+			msg := &kkproto.TransactionType{
+				Inputs: []*kkproto.TxInputType{currentTx.Inputs[*(req.Details.RequestIndex)]},
+			}
+			ack := &kkproto.TxAck{
+				Tx: msg,
+			}
+			req = new(kkproto.TxRequest)
+			_, err = kk.keepkeyExchange(ack, req)
+			continue
+		}
+		if *req.RequestType == kkproto.RequestType_TXOUTPUT {
+			msg := &kkproto.TransactionType{}
+			if len(req.Details.TxHash) > 0 {
+				msg.BinOutputs = []*kkproto.TxOutputBinType{currentTx.BinOutputs[*req.Details.RequestIndex]}
+			} else {
+				msg.Outputs = []*kkproto.TxOutputType{currentTx.Outputs[*req.Details.RequestIndex]}
+			}
+			ack := &kkproto.TxAck{
+				Tx: msg,
+			}
+			req = new(kkproto.TxRequest)
 			_, err = kk.keepkeyExchange(ack, req)
 			continue
 		}
 
 	}
 
+	fmt.Println("Done")
+	fmt.Println(signatures)
+	fmt.Println(serialized)
 	return nil, nil
 }
 
