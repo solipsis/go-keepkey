@@ -3,7 +3,9 @@ package keepkey
 import (
 	"encoding/hex"
 	"encoding/json"
+	"io/ioutil"
 	"strconv"
+	"strings"
 
 	"github.com/solipsis/go-keepkey/pkg/kkproto"
 )
@@ -64,6 +66,16 @@ type insightTx struct {
 
 */
 
+func fetchTx(hash string) (*kkproto.TransactionType, error) {
+	// TODO: better filepath
+	buf, err := ioutil.ReadFile("./txcache/insight_bitcoin_tx_" + hash + ".json")
+	if err != nil {
+		return nil, err
+	}
+
+	return parseTx(buf)
+}
+
 func parseTx(msg []byte) (*kkproto.TransactionType, error) {
 
 	itx := new(insightTx)
@@ -96,11 +108,12 @@ func parseTx(msg []byte) (*kkproto.TransactionType, error) {
 
 	for _, vout := range itx.Vout {
 		out := &kkproto.TxOutputBinType{}
-		parseAmount, err := strconv.Atoi(vout.Value)
+		parseAmount, err := strconv.Atoi(strings.Replace(vout.Value, ".", "", 1))
 		if err != nil {
 			return nil, err
 		}
-		amount := uint64(uint64(parseAmount) * 100000000)
+		//amount := uint64(uint64(parseAmount) * 100000000)
+		amount := uint64(uint64(parseAmount))
 
 		out.Amount = &amount
 
