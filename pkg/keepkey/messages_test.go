@@ -1,11 +1,14 @@
 package keepkey
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/solipsis/go-keepkey/pkg/kkproto"
 )
 
 // Device to connect to for testing
@@ -13,7 +16,8 @@ var kk *Keepkey
 var kks []*Keepkey
 
 // Default device seed for tests
-var testSeed = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong"
+//var testSeed = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong"
+var testSeed = "alcohol woman abuse must during monitor noble actual mixed trade anger aisle"
 
 // Ethereum root node path
 var ethPath = []uint32{0x8000002C, 0x8000003C, 0x80000000, 0x00000000, 0x00000000}
@@ -27,13 +31,53 @@ func SeedDevice() {
 func TestMain(m *testing.M) {
 	// Connect to the first connected keepkey then run tests
 	var err error
-	kks, err = GetDevicesWithConfig(&Config{AutoButton: true})
+	kks, err = GetDevicesWithConfig(&Config{AutoButton: true, Logger: log.New(os.Stdout, "Log: ", 0)})
 	if err != nil {
 		log.Fatal("No keepkey detected")
 	}
 
 	kk = kks[0]
 	os.Exit(m.Run())
+}
+
+func TestParseTx(t *testing.T) {
+
+	insightTx := `{"valueOut": 0.00163698, "vout": [{"spentIndex": 0, "spentHeight": 350552, "value": "0.00113698", "n": 0, "spentTxId": "f003c5c041d0708026e20ce97733f4561fb8c52e302692ac2e550aabe6c3912f", "scriptPubKey": {"type": "pubkeyhash", "hex": "76a914902c642ba3a22f5c6cfa30a1790c133ddf15cc8888ac", "addresses": ["1E9KUz71DjP3rNk2Xibd1FwyHLWfbnhrCz"], "asm": "OP_DUP OP_HASH160 902c642ba3a22f5c6cfa30a1790c133ddf15cc88 OP_EQUALVERIFY OP_CHECKSIG"}}, {"spentIndex": 0, "spentHeight": 344045, "value": "0.00050000", "n": 1, "spentTxId": "c275c333fd1b36bef4af316226c66a8b3693fbfcc081a5e16a2ae5fcb09e92bf", "scriptPubKey": {"type": "pubkeyhash", "hex": "76a914a6450f1945831a81912616691e721b787383f4ed88ac", "addresses": ["1GA9u9TfCG7SWmKCveBumdA1TZpfom6ZdJ"], "asm": "OP_DUP OP_HASH160 a6450f1945831a81912616691e721b787383f4ed OP_EQUALVERIFY OP_CHECKSIG"}}], "blockhash": "00000000000000000f9b5080b82daedd60017cbe97d394c5eacd3b7d4249d7ef", "valueIn": 0.00174998, "fees": 0.000113, "vin": [{"addr": "15T9DSqc6wjkPxcr2MNVSzF9JAePdvS3n1", "vout": 0, "sequence": 4294967295, "doubleSpentTxID": null, "value": 0.00174998, "n": 0, "valueSat": 174998, "txid": "beafc7cbd873d06dbee88a7002768ad5864228639db514c81cfb29f108bb1e7a", "scriptSig": {"hex": "47304402204ec6818b86591bbbc2abd5a10d203df49996c4bd5621eb2fa85345bb05458fa602202c9553fb00fc18199af82f4ec8f1055e9aeda6a5bbead1e02303a95a8bc91d31012103f54094da6a0b2e0799286268bb59ca7c83538e81c78e64f6333f40f9e0e222c0", "asm": "304402204ec6818b86591bbbc2abd5a10d203df49996c4bd5621eb2fa85345bb05458fa602202c9553fb00fc18199af82f4ec8f1055e9aeda6a5bbead1e02303a95a8bc91d31[ALL] 03f54094da6a0b2e0799286268bb59ca7c83538e81c78e64f6333f40f9e0e222c0"}}], "txid": "50f6f1209ca92d7359564be803cb2c932cde7d370f7cee50fd1fad6790f6206d", "blocktime": 1423664307, "version": 1, "confirmations": 223781, "time": 1423664307, "blockheight": 343014, "locktime": 0, "size": 225}`
+
+	tx, err := parseTx([]byte(insightTx))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log("______________________________________________________________--")
+	t.Logf("%+v\n", tx)
+}
+
+func TestSignTx(t *testing.T) {
+
+	phash, _ := hex.DecodeString("d5f65ee80147b4bcc70b75e4bbf2d7382021b871bd8867ef8fa525ef50864882")
+	var prevIndex uint32
+	inp1 := &kkproto.TxInputType{
+		AddressN:  []uint32{0},
+		PrevHash:  phash,
+		PrevIndex: &prevIndex,
+	}
+
+	//outAddr, _ := hex.DecodeString("1MJ2tj2ThBE62zXbBYA5ZaN3fdve5CPAz1")
+	outAddr := "1MJ2tj2ThBE62zXbBYA5ZaN3fdve5CPAz1"
+
+	var amt uint64 = 390000 - 10000
+	scriptType := kkproto.OutputScriptType_PAYTOADDRESS
+	out1 := &kkproto.TxOutputType{
+		Amount:     &amt,
+		ScriptType: &scriptType,
+		Address:    &outAddr,
+	}
+
+	_, err := kk.signTx("BITCOIN", []*kkproto.TxInputType{inp1}, []*kkproto.TxOutputType{out1})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestLoadDevice(t *testing.T) {
