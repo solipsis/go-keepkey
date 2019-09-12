@@ -54,6 +54,47 @@ func (kk *Keepkey) GetFeatures() (*kkproto.Features, error) {
 	return features, nil
 }
 
+func (kk *Keepkey) GetCoins() ([]*kkproto.CoinType, error) {
+
+	var (
+		start uint32
+		end   uint32
+	)
+	coins := make([]*kkproto.CoinType, 0)
+
+	// find count and chunk size
+	end = 1
+	req := &kkproto.GetCoinTable{
+		Start: &start,
+		End:   &end,
+	}
+	res := new(kkproto.CoinTable)
+	if _, err := kk.keepkeyExchange(req, res); err != nil {
+		return nil, err
+	}
+
+	numCoins := *res.NumCoins
+	chunkSize := *res.ChunkSize
+
+	for start < numCoins {
+		end = min(start+chunkSize, numCoins)
+		if _, err := kk.keepkeyExchange(req, res); err != nil {
+			return nil, err
+		}
+		coins = append(coins, res.Table...)
+		start += chunkSize
+	}
+
+	return coins, nil
+}
+
+func min(x, y uint32) uint32 {
+	if x < y {
+		return x
+	}
+	return y
+}
+
 // ClearSession clears cached session values such as the pin and passphrase
 func (kk *Keepkey) ClearSession() error {
 
