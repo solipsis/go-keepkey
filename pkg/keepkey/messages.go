@@ -60,7 +60,6 @@ func (kk *Keepkey) GetCoins() ([]*kkproto.CoinType, error) {
 		start uint32
 		end   uint32
 	)
-	coins := make([]*kkproto.CoinType, 0)
 
 	// find count and chunk size
 	end = 1
@@ -72,10 +71,17 @@ func (kk *Keepkey) GetCoins() ([]*kkproto.CoinType, error) {
 	if _, err := kk.keepkeyExchange(req, res); err != nil {
 		return nil, err
 	}
-
 	numCoins := *res.NumCoins
 	chunkSize := *res.ChunkSize
+	coins := make([]*kkproto.CoinType, 0, numCoins)
 
+	// fetch all coins in {chunkSize chunks}
+	min := func(x, y uint32) uint32 {
+		if x < y {
+			return x
+		}
+		return y
+	}
 	for start < numCoins {
 		end = min(start+chunkSize, numCoins)
 		if _, err := kk.keepkeyExchange(req, res); err != nil {
@@ -86,13 +92,6 @@ func (kk *Keepkey) GetCoins() ([]*kkproto.CoinType, error) {
 	}
 
 	return coins, nil
-}
-
-func min(x, y uint32) uint32 {
-	if x < y {
-		return x
-	}
-	return y
 }
 
 // ClearSession clears cached session values such as the pin and passphrase
