@@ -80,7 +80,7 @@ func TestSignTx(t *testing.T) {
 		Address:    &outAddr,
 	}
 
-	signed, err := kk.signTx("BITCOIN", []*kkproto.TxInputType{inp1}, []*kkproto.TxOutputType{out1})
+	signed, err := kk.SignTx("BITCOIN", []*kkproto.TxInputType{inp1}, []*kkproto.TxOutputType{out1})
 	if err != nil {
 		t.Fatal(err)
 	}
