@@ -839,15 +839,6 @@ func (kk *Keepkey) ethereumSignTx(est *kkproto.EthereumSignTx) (*kkproto.Ethereu
 
 }
 
-type input struct {
-}
-
-type output struct {
-}
-
-type transaction struct {
-}
-
 func prepareSign(inputs []*kkproto.TxInputType, outputs []*kkproto.TxOutputType) map[string]*kkproto.TransactionType {
 	txs := make(map[string]*kkproto.TransactionType)
 
@@ -911,7 +902,7 @@ func copyTxMeta(tx *kkproto.TransactionType) *kkproto.TransactionType {
 	}
 }
 
-func (kk *Keepkey) signTx(cname string, inputs []*kkproto.TxInputType, outputs []*kkproto.TxOutputType) (*kkproto.TxRequest, error) {
+func (kk *Keepkey) signTx(cname string, inputs []*kkproto.TxInputType, outputs []*kkproto.TxOutputType) ([]byte, error) {
 
 	var (
 		inCount  = uint32(len(inputs))
@@ -936,17 +927,20 @@ func (kk *Keepkey) signTx(cname string, inputs []*kkproto.TxInputType, outputs [
 	_, err = kk.keepkeyExchange(signTx, req)
 
 	for {
-		fmt.Println("**************************************************************************")
+		//fmt.Println("**************************************************************************")
 		//a, _ := json.MarshalIndent(req, "", "    ")
 		//fmt.Println(string(a))
 		if err != nil {
-			return req, err
+			return nil, err
 		}
 
 		if req.Serialized != nil {
 
 			// copy a new chunk serialized transaction if present
 			serialized = append(serialized, req.Serialized.SerializedTx...)
+
+			fmt.Println("**************************************************************************")
+			fmt.Println(hex.EncodeToString(req.Serialized.SerializedTx))
 
 			if req.Serialized.SignatureIndex != nil {
 				copy(signatures[*req.Serialized.SignatureIndex], req.Serialized.Signature)
@@ -960,13 +954,6 @@ func (kk *Keepkey) signTx(cname string, inputs []*kkproto.TxInputType, outputs [
 
 		var currentTx *kkproto.TransactionType
 		currentTx = txmap[hex.EncodeToString(req.Details.TxHash)]
-		fmt.Println("!!!", hex.EncodeToString(req.Details.TxHash))
-		// If the field details.tx_hash is not set, some piece of the transaction that should be signed is requested.
-		// Otherwise, this field contains the hash of some input transaction and some piece of that transaction is requested.
-		//if req.Details != nil && len(req.Details.TxHash) > 0 {
-		//currentTx = txmap[string(req.Details.TxHash)]
-		fmt.Println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", currentTx)
-		//}
 
 		if *req.RequestType == kkproto.RequestType_TXMETA {
 			ack := &kkproto.TxAck{
@@ -980,8 +967,8 @@ func (kk *Keepkey) signTx(cname string, inputs []*kkproto.TxInputType, outputs [
 			msg := &kkproto.TransactionType{
 				Inputs: []*kkproto.TxInputType{currentTx.Inputs[*(req.Details.RequestIndex)]},
 			}
-			fmt.Println("########INPUT##################")
-			fmt.Println(hex.EncodeToString(msg.Inputs[0].PrevHash))
+			//fmt.Println("########INPUT##################")
+			//fmt.Println(hex.EncodeToString(msg.Inputs[0].PrevHash))
 			ack := &kkproto.TxAck{
 				Tx: msg,
 			}
@@ -1010,7 +997,7 @@ func (kk *Keepkey) signTx(cname string, inputs []*kkproto.TxInputType, outputs [
 	fmt.Println(signatures)
 	fmt.Println(serialized)
 	fmt.Println(hex.EncodeToString(serialized))
-	return nil, nil
+	return serialized, nil
 }
 
 /*
