@@ -862,46 +862,38 @@ func copyTxMeta(tx *kkproto.TransactionType) *kkproto.TransactionType {
 	}
 }
 
-func (kk *Keepkey) signTx(cname string, inputs []*kkproto.TxInputType, outputs []*kkproto.TxOutputType) ([]byte, error) {
+func (kk *Keepkey) SignTx(cname string, inputs []*kkproto.TxInputType, outputs []*kkproto.TxOutputType) ([]byte, error) {
 
+	// lookup previous transactions we need for signing
+	txmap := prepareSign(inputs, outputs)
+
+	// start signing flow
 	var (
 		inCount  = uint32(len(inputs))
 		outCount = uint32(len(outputs))
 		coinName = cname
+		req      = new(kkproto.TxRequest) // what the device is requesting from us
+		err      error
 	)
-
 	signTx := &kkproto.SignTx{
 		OutputsCount: &outCount,
 		InputsCount:  &inCount,
 		CoinName:     &coinName,
 	}
+	_, err = kk.keepkeyExchange(signTx, req)
+	if err != nil {
+		return nil, err
+	}
 
-	// serialized transaction
-	serialized := make([]byte, 0)
+	var ack *kkproto.TxAck        // our response to the devices query
+	serialized := make([]byte, 0) // serialized transaction
 	signatures := make([][]byte, len(inputs))
 
-	txmap := prepareSign(inputs, outputs)
-
-	var err error
-	req := new(kkproto.TxRequest)
-	_, err = kk.keepkeyExchange(signTx, req)
-
+	// Keep responding to the device's requests until signing is complete
 	for {
-		//fmt.Println("**************************************************************************")
-		//a, _ := json.MarshalIndent(req, "", "    ")
-		//fmt.Println(string(a))
-		if err != nil {
-			return nil, err
-		}
-
+		// copy a new chunk serialized transaction if present
 		if req.Serialized != nil {
-
-			// copy a new chunk serialized transaction if present
 			serialized = append(serialized, req.Serialized.SerializedTx...)
-
-			fmt.Println("**************************************************************************")
-			fmt.Println(hex.EncodeToString(req.Serialized.SerializedTx))
-
 			if req.Serialized.SignatureIndex != nil {
 				copy(signatures[*req.Serialized.SignatureIndex], req.Serialized.Signature)
 			}
@@ -912,157 +904,40 @@ func (kk *Keepkey) signTx(cname string, inputs []*kkproto.TxInputType, outputs [
 			break
 		}
 
-		var currentTx *kkproto.TransactionType
-		currentTx = txmap[hex.EncodeToString(req.Details.TxHash)]
+		currentTx := txmap[hex.EncodeToString(req.Details.TxHash)]
 
-		if *req.RequestType == kkproto.RequestType_TXMETA {
-			ack := &kkproto.TxAck{
+		switch *req.RequestType {
+		// device is requesting metadata about a previously provided input or output
+		case kkproto.RequestType_TXMETA:
+			ack = &kkproto.TxAck{
 				Tx: copyTxMeta(currentTx),
 			}
-			req = new(kkproto.TxRequest)
-			_, err = kk.keepkeyExchange(ack, req)
-			continue
-		}
-		if *req.RequestType == kkproto.RequestType_TXINPUT {
-			msg := &kkproto.TransactionType{
-				Inputs: []*kkproto.TxInputType{currentTx.Inputs[*(req.Details.RequestIndex)]},
+		// device is requesting an input to {currentTx}
+		case kkproto.RequestType_TXINPUT:
+			ack = &kkproto.TxAck{
+				Tx: &kkproto.TransactionType{
+					Inputs: []*kkproto.TxInputType{currentTx.Inputs[*(req.Details.RequestIndex)]},
+				},
 			}
-			//fmt.Println("########INPUT##################")
-			//fmt.Println(hex.EncodeToString(msg.Inputs[0].PrevHash))
-			ack := &kkproto.TxAck{
-				Tx: msg,
-			}
-			req = new(kkproto.TxRequest)
-			_, err = kk.keepkeyExchange(ack, req)
-			continue
-		}
-		if *req.RequestType == kkproto.RequestType_TXOUTPUT {
+		// device is requesting an ouptut of {currentTx}
+		case kkproto.RequestType_TXOUTPUT:
 			msg := &kkproto.TransactionType{}
 			if len(req.Details.TxHash) > 0 {
 				msg.BinOutputs = []*kkproto.TxOutputBinType{currentTx.BinOutputs[*req.Details.RequestIndex]}
 			} else {
 				msg.Outputs = []*kkproto.TxOutputType{currentTx.Outputs[*req.Details.RequestIndex]}
 			}
-			ack := &kkproto.TxAck{
+			ack = &kkproto.TxAck{
 				Tx: msg,
 			}
-			req = new(kkproto.TxRequest)
-			_, err = kk.keepkeyExchange(ack, req)
-			continue
 		}
 
+		req = new(kkproto.TxRequest)
+		_, err = kk.keepkeyExchange(ack, req)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	fmt.Println("Done")
-	fmt.Println(signatures)
-	fmt.Println(serialized)
-	fmt.Println(hex.EncodeToString(serialized))
 	return serialized, nil
 }
-
-/*
-// *
-// Structure representing transaction
-type TransactionType struct {
-	Version              *uint32            `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
-	Inputs               []*TxInputType     `protobuf:"bytes,2,rep,name=inputs" json:"inputs,omitempty"`
-	BinOutputs           []*TxOutputBinType `protobuf:"bytes,3,rep,name=bin_outputs,json=binOutputs" json:"bin_outputs,omitempty"`
-	Outputs              []*TxOutputType    `protobuf:"bytes,5,rep,name=outputs" json:"outputs,omitempty"`
-	LockTime             *uint32            `protobuf:"varint,4,opt,name=lock_time,json=lockTime" json:"lock_time,omitempty"`
-	InputsCnt            *uint32            `protobuf:"varint,6,opt,name=inputs_cnt,json=inputsCnt" json:"inputs_cnt,omitempty"`
-	OutputsCnt           *uint32            `protobuf:"varint,7,opt,name=outputs_cnt,json=outputsCnt" json:"outputs_cnt,omitempty"`
-	ExtraData            []byte             `protobuf:"bytes,8,opt,name=extra_data,json=extraData" json:"extra_data,omitempty"`
-	ExtraDataLen         *uint32            `protobuf:"varint,9,opt,name=extra_data_len,json=extraDataLen" json:"extra_data_len,omitempty"`
-	Expiry               *uint32            `protobuf:"varint,10,opt,name=expiry" json:"expiry,omitempty"`
-	Overwintered         *bool              `protobuf:"varint,11,opt,name=overwintered" json:"overwintered,omitempty"`
-	VersionGroupId       *uint32            `protobuf:"varint,12,opt,name=version_group_id,json=versionGroupId" json:"version_group_id,omitempty"`
-	BranchId             *uint32            `protobuf:"varint,13,opt,name=branch_id,json=branchId" json:"branch_id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
-	XXX_unrecognized     []byte             `json:"-"`
-	XXX_sizecache        int32              `json:"-"`
-}
-
-*/
-
-// *
-// Request: Ask device to sign transaction
-// @next PassphraseRequest
-// @next PinMatrixRequest
-// @next TxRequest
-// @next Failure
-/*
-type SignTx struct {
-	OutputsCount         *uint32  `protobuf:"varint,1,req,name=outputs_count,json=outputsCount" json:"outputs_count,omitempty"`
-	InputsCount          *uint32  `protobuf:"varint,2,req,name=inputs_count,json=inputsCount" json:"inputs_count,omitempty"`
-	CoinName             *string  `protobuf:"bytes,3,opt,name=coin_name,json=coinName,def=Bitcoin" json:"coin_name,omitempty"`
-	Version              *uint32  `protobuf:"varint,4,opt,name=version,def=1" json:"version,omitempty"`
-	LockTime             *uint32  `protobuf:"varint,5,opt,name=lock_time,json=lockTime,def=0" json:"lock_time,omitempty"`
-	Expiry               *uint32  `protobuf:"varint,6,opt,name=expiry" json:"expiry,omitempty"`
-	Overwintered         *bool    `protobuf:"varint,7,opt,name=overwintered" json:"overwintered,omitempty"`
-	VersionGroupId       *uint32  `protobuf:"varint,8,opt,name=version_group_id,json=versionGroupId" json:"version_group_id,omitempty"`
-	BranchId             *uint32  `protobuf:"varint,10,opt,name=branch_id,json=branchId" json:"branch_id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-*/
-
-/*
-// Response: Device asks for information for signing transaction or returns the last result
-// If request_index is set, device awaits TxAck message (with fields filled in according to request_type)
-// If signature_index is set, 'signature' contains signed input of signature_index's input
-// @prev SignTx
-// @prev SimpleSignTx
-// @prev TxAck
-type TxRequest struct {
-	RequestType      *RequestType             `protobuf:"varint,1,opt,name=request_type,json=requestType,enum=RequestType" json:"request_type,omitempty"`
-	Details          *TxRequestDetailsType    `protobuf:"bytes,2,opt,name=details" json:"details,omitempty"`
-	Serialized       *TxRequestSerializedType `protobuf:"bytes,3,opt,name=serialized" json:"serialized,omitempty"`
-	XXX_unrecognized []byte                   `json:"-"`
-}
-
-// *
-// Type of information required by transaction signing process
-// @used_in TxRequest
-type RequestType int32
-
-const (
-	RequestType_TXINPUT     RequestType = 0
-	RequestType_TXOUTPUT    RequestType = 1
-	RequestType_TXMETA      RequestType = 2
-	RequestType_TXFINISHED  RequestType = 3
-	RequestType_TXEXTRADATA RequestType = 4
-)
-
-/*
-// *
-// Structure representing request details
-// @used_in TxRequest
-type TxRequestDetailsType struct {
-	RequestIndex     *uint32 `protobuf:"varint,1,opt,name=request_index,json=requestIndex" json:"request_index,omitempty"`
-	TxHash           []byte  `protobuf:"bytes,2,opt,name=tx_hash,json=txHash" json:"tx_hash,omitempty"`
-	ExtraDataLen     *uint32 `protobuf:"varint,3,opt,name=extra_data_len,json=extraDataLen" json:"extra_data_len,omitempty"`
-	ExtraDataOffset  *uint32 `protobuf:"varint,4,opt,name=extra_data_offset,json=extraDataOffset" json:"extra_data_offset,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
-}
-
-// Structure representing serialized data
-// @used_in TxRequest
-type TxRequestSerializedType struct {
-	SignatureIndex   *uint32 `protobuf:"varint,1,opt,name=signature_index,json=signatureIndex" json:"signature_index,omitempty"`
-	Signature        []byte  `protobuf:"bytes,2,opt,name=signature" json:"signature,omitempty"`
-	SerializedTx     []byte  `protobuf:"bytes,3,opt,name=serialized_tx,json=serializedTx" json:"serialized_tx,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
-}
-
-func (kk *Keepkey) SignTx(outCount, inCount, version, locktime uint32, name string) {
-	// send SignTx
-	//kkproto.SignTx
-
-	// device responds with TxRequest
-	//kkproto.TxRequest
-	//kkproto.TxAck
-	// if details.request_idex. Send an ack with fields base on request type
-	// if serilazed.signatur_index signature contains signed input of signatur_index's input
-}
-*/
