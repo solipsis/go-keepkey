@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"text/tabwriter"
@@ -18,18 +19,19 @@ func init() {
 type coin struct {
 	name   string
 	slip44 string
+	extra  string
 }
 
 // TODO: ask device for coin table instead making another damn coin table
 var coins = []coin{
-	coin{"Bitcoin", "44'/0'"},
-	coin{"Testnet", "44'/1'"},
-	coin{"Litecoin", "44'/2'"},
-	coin{"Dogecoin", "44'/3'"},
-	coin{"Dash", "44'/5'"},
-	coin{"Ethereum", "44'/60'"},
-	coin{"Bitcoin (segwit)", "49'/0'"},
-	coin{"EOS", "44'/194'"},
+	coin{"Bitcoin", "44'/0'", ""},
+	coin{"Testnet", "44'/1'", ""},
+	coin{"Litecoin", "44'/2'", ""},
+	coin{"Dogecoin", "44'/3'", ""},
+	coin{"Dash", "44'/5'", ""},
+	coin{"Ethereum", "44'/60'", ""},
+	coin{"Bitcoin", "49'/0'", " (Segwit)"},
+	coin{"EOS", "44'/194'", ""},
 }
 
 var numAccounts uint32
@@ -44,8 +46,8 @@ var xpubsCmd = &cobra.Command{
 		w.Init(os.Stdout, 0, 8, 2, '\t', 0)
 
 		magenta := color.New(color.FgBlue).FprintfFunc()
-		magenta(w, "|  coin  |\t|  path  |\t|  xpub  |\n")
-		fmt.Fprintf(w, "__________\t__________\t__________\n")
+		magenta(w, "|  coin  |\t|  path  |\t|  xpub  |\t|  address (m/x'/y'/z'/0/0) |\n")
+		fmt.Fprintf(w, "__________\t__________\t_______________________________________________________________________________________________________________\t__________________________________\n")
 
 		for _, c := range coins {
 			for x := 0; x < int(numAccounts); x++ {
@@ -58,7 +60,22 @@ var xpubsCmd = &cobra.Command{
 					os.Exit(1)
 				}
 
-				fmt.Fprintf(w, "%s\t%s/%d'\t%s\n", c.name, c.slip44, x, xpub)
+				addrPath := append(path, []uint32{0, 0}...)
+
+				var addr string
+				if c.name == "Ethereum" {
+					var buf []byte
+					buf, err = kk.EthereumGetAddress(addrPath, false)
+					addr = "0x" + hex.EncodeToString(buf)
+				} else {
+					addr, err = kk.GetAddress(addrPath, c.name, false)
+				}
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+
+				fmt.Fprintf(w, "%s%s\t%s/%d'\t%s\t%s\n", c.name, c.extra, c.slip44, x, xpub, addr)
 			}
 		}
 		w.Flush()
