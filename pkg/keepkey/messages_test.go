@@ -3,7 +3,6 @@ package keepkey
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"

@@ -751,16 +751,24 @@ func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, tx *EthereumTx) (*Eth
 	if strings.HasPrefix(to, "0x") || strings.HasPrefix(to, "0X") {
 		to = to[2:]
 	}
+
 	toBuf := make([]byte, 20)
 	if _, err := hex.Decode(toBuf, []byte(to)); err != nil {
 		return nil, err
 	}
 
+	var datalen uint32 = uint32(len(tx.Data))
+	var chainID uint32 = 5 // Goerli testnet
+
 	// Create request
 	est := &kkproto.EthereumSignTx{
-		AddressN: derivationPath,
-		Nonce:    big.NewInt(int64(tx.Nonce)).Bytes(),
-		To:       toBuf,
+		AddressN:         derivationPath,
+		Nonce:            big.NewInt(int64(tx.Nonce)).Bytes(),
+		DataLength:       &datalen,
+		DataInitialChunk: tx.Data[:1024],
+		ChainId:          &chainID,
+		//To:       toBuf,
+		//To: make([]byte, 0),
 	}
 	// For proper rlp encoding when the value of the  parameter is zero,
 	// the device expects an empty byte array instead of
@@ -775,7 +783,7 @@ func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, tx *EthereumTx) (*Eth
 		est.GasPrice = emptyOrVal(tx.GasPrice)
 	}
 
-	resp, err := kk.ethereumSignTx(est)
+	resp, err := kk.ethereumSignTx(est, tx.Data)
 
 	if err != nil {
 		return tx, errors.New("Unable to sign transaction:" + err.Error())
@@ -788,9 +796,9 @@ func (kk *Keepkey) EthereumSignTx(derivationPath []uint32, tx *EthereumTx) (*Eth
 	return tx, nil
 }
 
-func (kk *Keepkey) ethereumSignTx(est *kkproto.EthereumSignTx) (*kkproto.EthereumTxRequest, error) {
-	data := make([]byte, 0)
+func (kk *Keepkey) ethereumSignTx(est *kkproto.EthereumSignTx, data []byte) (*kkproto.EthereumTxRequest, error) {
 	response := new(kkproto.EthereumTxRequest)
+	data = data[1024:]
 
 	if _, err := kk.keepkeyExchange(est, response); err != nil {
 		return nil, err
