@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	recoverDeviceCmd.Flags().Uint32VarP(&numWords, "numWords", "n", 12, "number of words for seed (12, 18, 24)")
+	recoverDeviceCmd.Flags().Uint32VarP(&numWords, "numWords", "n", 24, "number of words for seed (12, 18, 24)")
 	recoverDeviceCmd.Flags().BoolVarP(&enforceWordList, "wordList", "", false, "enforce device word list")
 	recoverDeviceCmd.Flags().BoolVarP(&dryRun, "dryRun", "d", false, "Test your recovery sentence with a \"Dry Run\"")
 	recoverDeviceCmd.Flags().BoolVarP(&useCharacterCipher, "characterCipher", "c", true, "use device character cipher")
